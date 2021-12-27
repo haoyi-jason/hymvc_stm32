@@ -8,11 +8,13 @@
 #include "at24_eep.h"
 #include "nvm_config.h"
 #include "task_mbmaster.h"
+#include "digital_io.h"
 
 int8_t config_handler(CANRxFrame *prx,CANTxFrame *ptx);
 int8_t id_handler(CANRxFrame *prx,CANTxFrame *ptx);
 int8_t digital_input_handler(CANRxFrame *prx,CANTxFrame *ptx);
 int8_t digital_output_handler(CANRxFrame *prx,CANTxFrame *ptx);
+int8_t digital_config_handler(CANRxFrame *prx,CANTxFrame *ptx);
 int8_t analog_input_handler(CANRxFrame *prx,CANTxFrame *ptx);
 int8_t analog_output_handler(CANRxFrame *prx,CANTxFrame *ptx);
 int8_t power_output_handler(CANRxFrame *prx,CANTxFrame *ptx);
@@ -27,6 +29,7 @@ can_frame_handler PacketHandler[] = {
   {0x99,id_handler},
   {0x140,digital_output_handler},
   {0x141,digital_input_handler},
+  {0x142,digital_config_handler},
   {0x150,analog_output_handler},
   {0x160,analog_input_handler},  
   {0x180,power_output_handler},  
@@ -93,6 +96,7 @@ static void report_cb(void *arg)
 //  chSysUnlockFromISR();
 }
 
+#define NOF_CAN_PACKET  8
 static THD_WORKING_AREA(waCANRX,4096);
 static THD_FUNCTION(procCANRx,p){
  // thread_t *parent = (thread_t)p;
@@ -102,7 +106,7 @@ static THD_FUNCTION(procCANRx,p){
   int32_t analogInputs[8];
   event_listener_t el;
   CANTxFrame txFrame;
-  CANTxFrame txFrames[6];
+  CANTxFrame txFrames[NOF_CAN_PACKET];
 //  txFrame.DLC = 8;
 //  txFrame.RTR = CAN_RTR_DATA;
 //  txFrame.EID = 0x234;
@@ -114,7 +118,7 @@ static THD_FUNCTION(procCANRx,p){
   
   //canTransmit(ip,CAN_ANY_MAILBOX,&txFrame,TIME_MS2I(100));
   runTime.state = 0;
-  for(uint8_t i=0;i<6;i++){
+  for(uint8_t i=0;i<NOF_CAN_PACKET;i++){
     txFrames[i].RTR = CAN_RTR_DATA;
     txFrames[i].DLC = 8;
     txFrames[i].IDE = CAN_IDE_EXT;
@@ -127,6 +131,9 @@ static THD_FUNCTION(procCANRx,p){
   
   txFrames[4].EID = 0x170;
   txFrames[5].EID = 0x171;
+  
+  txFrames[6].EID = 0x140;
+  txFrames[7].EID = 0x141;
   
   while(!chThdShouldTerminateX()){
     eventmask_t evt = chEvtWaitAnyTimeout(ALL_EVENTS,TIME_IMMEDIATE);
@@ -164,18 +171,32 @@ static THD_FUNCTION(procCANRx,p){
       fv = resolver_get_speed(1);
       memcpy((void*)&txFrames[5].data8[4], (void*)&fv,4);
       
+      // read digital io, byte 0~3 for ttl, 4~7 for ISO
+      uint8_t dio = 0x0;
+      for(uint8_t i=0;i<4;i++){
+        if(digital_get_iso_out(i)) dio |= (1 << i);
+      }
+      txFrames[6].data8[0] = dio;
+
+      txFrames[7].data32[0] = digital_get_input();
+      dio = 0;
+      for(uint8_t i=0;i<8;i++){
+        if(digital_get_iso_in(i)) dio |= (1 << i);
+      }
+      txFrames[7].data8[4] = dio;
+      
       runTime.txFrameId = 0;
       break;
     default:
-      if(runTime.txFrameId < 6){
-        if(canTransmit(ip,CAN_ANY_MAILBOX,&txFrames[runTime.txFrameId],TIME_MS2I(10)) == MSG_OK){
+      if(runTime.txFrameId < NOF_CAN_PACKET){
+        if(canTransmit(ip,CAN_ANY_MAILBOX,&txFrames[runTime.txFrameId],TIME_IMMEDIATE) == MSG_OK){
           runTime.txFrameId++;
         }
       }
       break;
     }
     runTime.state++;
-    if(runTime.state == 100){
+    if(runTime.state == 50){
       runTime.state = 0;
     }
     chThdSleepMilliseconds(10);
@@ -188,6 +209,7 @@ void task_communication_init(void)
   analog_output_task_init();
   resolver_task_init();
   modbus_master_task_init();
+  digital_init();
 //  canStart(&CAND1,&canCfg250K);
   at24eep_init(&I2CD2,32,1024,0x50,2);
   commRuntime = &runTime;
@@ -217,8 +239,31 @@ int8_t digital_input_handler(CANRxFrame *prx,CANTxFrame *ptx)
 }
 int8_t digital_output_handler(CANRxFrame *prx,CANTxFrame *ptx)
 {
+  if(prx->RTR == CAN_RTR_DATA){
+    uint8_t channel = prx->data8[0];
+    uint8_t value = prx->data8[1];
+    if(channel & 0x80){ // isolate output
+      digital_set_iso_out(channel & 0x7F,value);
+    }
+    else if(channel & 0x40){
+      digital_set_ttl_port(channel&0xf,value);
+    }
+    else{ // ttl channel
+      digital_set_ttl_bit(channel,value);
+    }
+  }
   return 0;
 }
+int8_t digital_config_handler(CANRxFrame *prx,CANTxFrame *ptx)
+{
+  if(prx->RTR == CAN_RTR_DATA){
+    uint8_t port = prx->data8[0];
+    uint8_t dir = prx->data8[1];
+    digital_set_ttl_port_dir(port,dir);
+  }
+  return 0;
+}
+
 int8_t analog_input_handler(CANRxFrame *prx,CANTxFrame *ptx)
 {
   return 0;

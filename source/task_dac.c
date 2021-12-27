@@ -58,6 +58,12 @@ static THD_FUNCTION(procAD57 ,p)
   ad57_get_fine_gain(runTime.ad57);
   ad57_get_offset(runTime.ad57);
   
+  for(uint8_t i=0;i<4;i++){
+    runTime.ad57->data[i] = 0x0;
+  }
+  ad57_set_dac(runTime.ad57,0xff);
+
+  
   chVTObjectInit(&runTime.vtDAC);
   //chVTSet(&runTime.vtDAC,TIME_MS2I(100),ad57_to,NULL);
   ad57_set_simulataneous_update(runTime.ad57,1);
