@@ -19863,6 +19863,51 @@
     <group>
         <name>source</name>
         <group>
+            <name>dual_motor_controller</name>
+            <group>
+                <name>task</name>
+                <file>
+                    <name>$extsource$\dual_motor_controller\task\task_dual_motor_ctrl.c</name>
+                </file>
+                <file>
+                    <name>$extsource$\dual_motor_controller\task\task_dual_motor_ctrl.h</name>
+                </file>
+                <file>
+                    <name>$extsource$\dual_motor_controller\task\task_dual_motor_ctrl_sweep.c</name>
+                </file>
+                <file>
+                    <name>$extsource$\dual_motor_controller\task\task_dual_motor_ctrl_sweep.h</name>
+                </file>
+            </group>
+            <file>
+                <name>$extsource$\dual_motor_controller\include\bit_mask.h</name>
+            </file>
+            <file>
+                <name>$extsource$\dual_motor_controller\src\dual_motor_ctrl.c</name>
+            </file>
+            <file>
+                <name>$extsource$\dual_motor_controller\include\dual_motor_ctrl.h</name>
+            </file>
+            <file>
+                <name>$extsource$\dual_motor_controller\src\pid_controller.c</name>
+            </file>
+            <file>
+                <name>$extsource$\dual_motor_controller\include\pid_controller.h</name>
+            </file>
+            <file>
+                <name>$extsource$\dual_motor_controller\src\saturation.c</name>
+            </file>
+            <file>
+                <name>$extsource$\dual_motor_controller\include\saturation.h</name>
+            </file>
+            <file>
+                <name>$extsource$\dual_motor_controller\src\tq_bias_calc.c</name>
+            </file>
+            <file>
+                <name>$extsource$\dual_motor_controller\include\tq_bias_calc.h</name>
+            </file>
+        </group>
+        <group>
             <name>FreeModbus</name>
             <group>
                 <name>Master_v296</name>
