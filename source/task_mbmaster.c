@@ -11,8 +11,8 @@
 struct _runTime{
   thread_t *self;
   uint8_t state;
-  long     speed_act;
-  long     pos_act;
+  int32_t speed_act;
+  int32_t pos_act;
   uint32_t signal_mask;
   uint16_t ctrl_1;
   uint16_t ctrl_2;
@@ -37,8 +37,8 @@ static THD_FUNCTION(procMBMaster ,p)
   xMBHandle xMBMaster;
   static eMBErrorCode eStatus, eStatus2;
     
-  USHORT usNRegs[5];
-  USHORT cntr=0;
+  //USHORT usNRegs[5];
+  //USHORT cntr=0;
   USHORT buffer[4] = {0,0,0,0};
 
   uint16_t _counter_read = 0;
@@ -50,7 +50,9 @@ static THD_FUNCTION(procMBMaster ,p)
     while(!chThdShouldTerminateX())
     {
       eventmask_t evt = chEvtWaitAny(ALL_EVENTS);
+
       if(evt & EV_REGISTER_WRITE_1){
+        /*Write control word to motor controller 1*/
         if(MB_ENOERR != (eStatus2 = eMBMWriteSingleRegister(xMBMaster,
                                                             MODBUS_ADD_INV1,
                                                             MODBUS_REG_ADD_CTRL,
@@ -62,6 +64,7 @@ static THD_FUNCTION(procMBMaster ,p)
       }
 
       if(evt & EV_REGISTER_WRITE_2){
+        /*Write control word to motor controller 2*/
         if(MB_ENOERR != (eStatus2 = eMBMWriteSingleRegister(xMBMaster,
                                                             MODBUS_ADD_INV2,
                                                             MODBUS_REG_ADD_CTRL,                                                            
@@ -74,9 +77,11 @@ static THD_FUNCTION(procMBMaster ,p)
       
       if(evt & EV_REGISTER_READ)
       {
+        /*Read status and signal*/
         eStatus = MB_ENOERR;
         if(!(_counter_read % 10))
         {
+          /*Read every 500 ms*/
           if(MB_ENOERR != (eStatus2 = eMBMReadHoldingRegisters(xMBMaster,
                                                                MODBUS_ADD_INV1,
                                                                MODBUS_REG_ADD_STATUS,
@@ -111,10 +116,11 @@ static THD_FUNCTION(procMBMaster ,p)
           _counter_read = 0;
         }
 
+        /*Read position and speed at once*/
         if(MB_ENOERR != (eStatus2 = eMBMReadHoldingRegisters(xMBMaster,
                                                              MODBUS_ADD_INV1,
                                                              MODBUS_REG_ADD_POS_ACT,
-                                                             2,
+                                                             4,
                                                              buffer)))
         {
           /*Reading error*/
@@ -123,23 +129,24 @@ static THD_FUNCTION(procMBMaster ,p)
         else
         {
           /*Read*/
-          runTime.pos_act = (((long)buffer[0] << 16) | (long)buffer[1]);
+          runTime.pos_act = (((int32_t)buffer[0] << 16) | (int32_t)buffer[1]);
+          runTime.speed_act = (((int32_t)buffer[2] << 16) | (int32_t)buffer[3]);
         }
 
-        if(MB_ENOERR != (eStatus2 = eMBMReadHoldingRegisters(xMBMaster,
-                                                             MODBUS_ADD_INV1,
-                                                             MODBUS_REG_ADD_SPEED_ACT,
-                                                             2,
-                                                             buffer)))
-        {
-          /*Reading error*/
-          eStatus = eStatus2;
-        }
-        else
-        {
-          /*Read*/
-          runTime.speed_act = (((int32_t)buffer[0] << 16) | (int32_t)buffer[1]);
-        }
+        //if(MB_ENOERR != (eStatus2 = eMBMReadHoldingRegisters(xMBMaster,
+        //                                                     MODBUS_ADD_INV1,
+        //                                                     MODBUS_REG_ADD_SPEED_ACT,
+        //                                                     2,
+        //                                                     buffer)))
+        //{
+        //  /*Reading error*/
+        //  eStatus = eStatus2;
+        //}
+        //else
+        //{
+        //  /*Read*/
+        //  runTime.speed_act = (((int32_t)buffer[0] << 16) | (int32_t)buffer[1]);
+        //}
 
         _counter_read++;
       }
@@ -187,26 +194,29 @@ int8_t modbus_master_WriteCtrl(uint16_t id, uint16_t value)
 
 uint16_t modbus_master_ReadStatus(uint16_t id)
 {
+  uint16_t value = 0U;
   if(id == 1)
   {
-
+    value = runTime.status_1;
   }
   else if(id == 2)
   {
-
+    value = runTime.status_2;
   }
   else
   {
     /*Bad id*/
   }
+
+  return value;
 }
 
-long modbus_master_ReadSpeed(void)
+int32_t modbus_master_ReadSpeed(void)
 {
   return runTime.speed_act;
 }
 
-long modbus_master_ReadPosition(void)
+int32_t modbus_master_ReadPosition(void)
 {
   return runTime.pos_act;
 }
