@@ -21,7 +21,7 @@ static THD_FUNCTION(procMBMaster ,p)
   
   USHORT usNRegs[5];
   USHORT cntr=0;
-  if(MB_ENOERR == (eStatus = eMBMSerialInit(&xMBMaster,MB_RTU,0,115200,MB_PAR_NONE))){
+  if(MB_ENOERR == (eStatus = eMBMSerialInit(&xMBMaster,MB_RTU,0,9600,MB_PAR_NONE))){
     while(!chThdShouldTerminateX()){
         eStatus = MB_ENOERR;
         if(MB_ENOERR != (eStatus2 = eMBMWriteSingleRegister(xMBMaster,1,0,cntr++))){

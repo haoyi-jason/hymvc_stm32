@@ -22,6 +22,10 @@ int8_t report_handler(CANRxFrame *prx,CANTxFrame *ptx);
 int8_t heartBeatHandler(CANRxFrame *prx,CANTxFrame *ptx);
 int8_t analog_output_config(CANRxFrame *prx,CANTxFrame *ptx);
 
+int8_t pid_command(CANRxFrame *prx,CANTxFrame *ptx);
+int8_t pid_parameter(CANRxFrame *prx,CANTxFrame *ptx);
+int8_t pid_request(CANRxFrame *prx,CANTxFrame *ptx);
+
 can_frame_handler PacketHandler[] = {
   {0x01,config_handler},
   {0x20,heartBeatHandler},
@@ -34,6 +38,9 @@ can_frame_handler PacketHandler[] = {
   {0x160,analog_input_handler},  
   {0x180,power_output_handler},  
   {0x201,analog_output_config},
+  {0x100,pid_command},
+  {0x101,pid_parameter},
+  {0x102,pid_request},
   {-1,NULL},
 };
 
@@ -327,6 +334,79 @@ int8_t report_handler(CANRxFrame *prx,CANTxFrame *ptx)
 int8_t heartBeatHandler(CANRxFrame *prx,CANTxFrame *ptx)
 {
   return 0; 
+}
+
+
+/* -- PID Handler -- */
+/*
+  return value = 0: no packet response required
+               = 1: ptx packet will be send
+
+*/
+int8_t pid_command(CANRxFrame *prx,CANTxFrame *ptx)
+{
+  int8_t ret = 0;
+  if(prx->RTR == CAN_RTR_DATA){
+    uint8_t flag = prx->data8[0] & 0x03;
+    uint8_t clr_fault = (prx->data8[0] >>2) & 0x01;
+    uint8_t mode = (prx->data8[0] >> 4);
+    uint8_t cmd_index = prx->data8[1];
+    int16_t cmd_value = prx->data16[1];
+    
+    //- todo: add PID command api below
+    
+  }
+  else{ // REMOTE Request, GET
+    //- todo: fulfill variables below from pid command
+    uint8_t flag = pid_get_flag();
+    uint8_t mode = pid_get_mode();
+    uint8_t cmd_index = prx->data8[1];
+    int16_t cmd_value = pid_get_cmd_value(cmd_index);
+    
+    ptx->RTR = CAN_RTR_DATA;
+    ptx->EID = prx->EID;
+    ptx->IDE = prx->IDE;
+    ptx->DLC = 8;
+    
+    ptx->data8[0] = (flag & 0x03) | (mode << 4);
+    ptx->data8[1] = cmd_index;
+    ptx->data16[1] = cmd_value;
+    ret = 1;
+  }
+  return ret;
+}
+
+
+int8_t pid_parameter(CANRxFrame *prx,CANTxFrame *ptx)
+{
+  int8_t ret = 0;
+  if(prx->RTR == CAN_RTR_DATA){
+    uint8_t cmd_index = prx->data8[0];
+    int32_t cmd_value;
+    // take care of byte order
+    memcpy((void*)&cmd_value,&prx->data8[1],4);
+    //- todo: add PID command api below
+    
+  }
+  else{ // REMOTE Request, GET
+    //- todo: fulfill variables below from pid command
+    uint8_t cmd_index = prx->data8[0];
+    int32_t cmd_value = pid_get_cmd_value(cmd_index);
+    
+    ptx->RTR = CAN_RTR_DATA;
+    ptx->EID = prx->EID;
+    ptx->IDE = prx->IDE;
+    ptx->DLC = 8;
+    
+    ptx->data8[0] = cmd_index;
+    memcpy(&ptx->data8[1], (void*)&cmd_value,4);
+    ret = 1;
+  }
+  return ret;
+}
+int8_t pid_request(CANRxFrame *prx,CANTxFrame *ptx)
+{
+  
 }
 
 
