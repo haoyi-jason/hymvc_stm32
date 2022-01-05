@@ -192,7 +192,7 @@ int8_t modbus_master_WriteCtrl(uint16_t id, uint16_t value)
   return ret;
 }
 
-uint16_t modbus_master_ReadStatus(uint16_t id)
+uint16_t modbus_master_GetStatus(uint16_t id)
 {
   uint16_t value = 0U;
   if(id == 1)
@@ -211,12 +211,12 @@ uint16_t modbus_master_ReadStatus(uint16_t id)
   return value;
 }
 
-int32_t modbus_master_ReadSpeed(void)
+int32_t modbus_master_GetSpeed(void)
 {
   return runTime.speed_act;
 }
 
-int32_t modbus_master_ReadPosition(void)
+int32_t modbus_master_GetPosition(void)
 {
   return runTime.pos_act;
 }

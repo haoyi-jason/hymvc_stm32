@@ -32,8 +32,8 @@ int main(void)
       
       counter = 0;
     }
-    speed = modbus_master_ReadSpeed();
-    pos = modbus_master_ReadPosition();
+    speed = modbus_master_GetSpeed();
+    pos = modbus_master_GetPosition();
     counter++;
     chThdSleepMilliseconds(10);
   }
