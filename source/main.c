@@ -8,33 +8,34 @@
 #include "task_mbmaster.h"
 #include "task_dac.h"
 
-static long speed = 0;
-static long pos = 0;
-static long counter = 0;
-static float output_sequence[4] = {-1.5f, 0.0f, 1.5f, 0.0f};
-static uint8_t sequence_index = 0;
+//static long speed = 0;
+//static long pos = 0;
+//static long counter = 0;
+//static float output_sequence[4] = {-1.5f, 0.0f, 1.5f, 0.0f};
+
+//static uint8_t sequence_index = 0;
+
 int main(void)
 {
   halInit();
   chSysInit();;
   task_communication_init();
-  //dmotc_algorithm_task_init();
+  tdmotc_algorithm_task_init();
 
-  modbus_master_WriteCtrl(1, 3);
-  chThdSleepMilliseconds(1000);
+  
   while(1){
-    if(!(counter % 500))
-    {
-      modbus_master_WriteCtrl(1, 3);
-      sequence_index %= 4;
-      analog_output_set_voltage(0, &output_sequence[sequence_index]);
-      sequence_index++;
-      
-      counter = 0;
-    }
-    speed = modbus_master_GetSpeed();
-    pos = modbus_master_GetPosition();
-    counter++;
+    //if(!(counter % 500))
+    //{
+      //modbus_master_WriteCtrl(1, 3);
+      //sequence_index %= 4;
+      //analog_output_set_voltage(0, &output_sequence[sequence_index]);
+      //sequence_index++;
+      //
+      //counter = 0;
+    //}
+    //speed = modbus_master_GetSpeed();
+    //pos = modbus_master_GetPosition();
+    //counter++;
     chThdSleepMilliseconds(10);
   }
 }
