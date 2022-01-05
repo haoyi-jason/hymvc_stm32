@@ -469,6 +469,7 @@ int8_t pid_command(CANRxFrame *prx,CANTxFrame *ptx)
     uint8_t mode = (prx->data8[0] >> 4);
     uint8_t cmd_index = prx->data8[1];
     int16_t cmd_value = prx->data16[1];
+
     
     if(clr_fault)
     {
@@ -478,6 +479,23 @@ int8_t pid_command(CANRxFrame *prx,CANTxFrame *ptx)
     if(2U == flag && (false == tdmotc_GetFault()))
     {
       tdmotc_Start(mode);
+    }
+
+    uint8_t mode_readback = tdmotc_GetMode();
+    float fv = 0.01f * ((float)cmd_value);
+
+    switch (mode_readback)
+    {
+      case TDMOTC_MODE_S:
+      tdmotc_SetSpeedCmd(fv);
+      break;
+
+      case TDMOTC_MODE_P:
+      tdmotc_SetPosCmd(fv);
+      break;
+
+      default:
+      break;
     }
   }
   else{ // REMOTE Request, GET
