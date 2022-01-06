@@ -6,7 +6,7 @@ extern "C" {
 
 #include "mbport.h"
 
-#define MODBUS_BAUDRATE           ((ULONG)115200)
+#define MODBUS_BAUDRATE           ((ULONG)10000)
 #define MODBUS_ADD_INV1           ((UCHAR)1)
 #define MODBUS_ADD_INV2           ((UCHAR)2)
 
