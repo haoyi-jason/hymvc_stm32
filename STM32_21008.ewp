@@ -395,8 +395,7 @@
                     <state>D:\SourceRespo\freemodbus_src\mbmaster-v2.9.6\mbmaster-v2.9.6\mbmaster\udp</state>
                     <state>D:\SourceRespo\freemodbus_src\mbmaster-v2.9.6\mbmaster-v2.9.6\mbmaster\tcp</state>
                     <state>$PROJ_DIR$\source\MBMPort</state>
-                    <state>D:\SourceRespo\dual_motor_controller\include</state>
-                    <state>D:\SourceRespo\dual_motor_controller\task</state>
+                    <state>D:\SourceRespo\IAR_SRC_WS\hymvc_stm32\source\dual_motor_ctrl</state>
                 </option>
                 <option>
                     <name>CCStdIncCheck</name>
@@ -18081,41 +18080,41 @@
             <group>
                 <name>task</name>
                 <file>
-                    <name>$extsource$\dual_motor_controller\task\dual_motor_ctrl_config.h</name>
+                    <name>$PROJ_DIR$\source\dual_motor_ctrl_config.h</name>
                 </file>
                 <file>
-                    <name>$extsource$\dual_motor_controller\task\task_dual_motor_ctrl.c</name>
+                    <name>$PROJ_DIR$\source\task_dual_motor_ctrl.c</name>
                 </file>
                 <file>
-                    <name>$extsource$\dual_motor_controller\task\task_dual_motor_ctrl.h</name>
+                    <name>$PROJ_DIR$\source\task_dual_motor_ctrl.h</name>
                 </file>
             </group>
             <file>
-                <name>$extsource$\dual_motor_controller\include\bit_mask.h</name>
+                <name>$PROJ_DIR$\source\dual_motor_ctrl\bit_mask.h</name>
             </file>
             <file>
-                <name>$extsource$\dual_motor_controller\src\dual_motor_ctrl.c</name>
+                <name>$PROJ_DIR$\source\dual_motor_ctrl\dual_motor_ctrl.c</name>
             </file>
             <file>
-                <name>$extsource$\dual_motor_controller\include\dual_motor_ctrl.h</name>
+                <name>$PROJ_DIR$\source\dual_motor_ctrl\dual_motor_ctrl.h</name>
             </file>
             <file>
-                <name>$extsource$\dual_motor_controller\src\pid_controller.c</name>
+                <name>$PROJ_DIR$\source\dual_motor_ctrl\pid_controller.c</name>
             </file>
             <file>
-                <name>$extsource$\dual_motor_controller\include\pid_controller.h</name>
+                <name>$PROJ_DIR$\source\dual_motor_ctrl\pid_controller.h</name>
             </file>
             <file>
-                <name>$extsource$\dual_motor_controller\src\saturation.c</name>
+                <name>$PROJ_DIR$\source\dual_motor_ctrl\saturation.c</name>
             </file>
             <file>
-                <name>$extsource$\dual_motor_controller\include\saturation.h</name>
+                <name>$PROJ_DIR$\source\dual_motor_ctrl\saturation.h</name>
             </file>
             <file>
-                <name>$extsource$\dual_motor_controller\src\tq_bias_calc.c</name>
+                <name>$PROJ_DIR$\source\dual_motor_ctrl\tq_bias_calc.c</name>
             </file>
             <file>
-                <name>$extsource$\dual_motor_controller\include\tq_bias_calc.h</name>
+                <name>$PROJ_DIR$\source\dual_motor_ctrl\tq_bias_calc.h</name>
             </file>
         </group>
         <group>
