@@ -10,8 +10,8 @@
 
 //static long speed = 0;
 //static long pos = 0;
-//static long counter = 0;
-//static float output_sequence[4] = {-1.5f, 0.0f, 1.5f, 0.0f};
+static long counter = 0;
+static float output_sequence[4] = {-1.5f, 0.0f, 1.5f, 0.0f};
 
 //static uint8_t sequence_index = 0;
 
@@ -24,18 +24,18 @@ int main(void)
 
   
   while(1){
-    //if(!(counter % 500))
-    //{
+    if(!(counter % 100))
+    {
       //modbus_master_WriteCtrl(1, 3);
       //sequence_index %= 4;
-      //analog_output_set_voltage(0, &output_sequence[sequence_index]);
+      //analog_output_set_voltage(0, &output_sequence[0]);
       //sequence_index++;
       //
-      //counter = 0;
-    //}
+      counter = 0;
+    }
     //speed = modbus_master_GetSpeed();
     //pos = modbus_master_GetPosition();
-    //counter++;
+    counter++;
     chThdSleepMilliseconds(10);
   }
 }

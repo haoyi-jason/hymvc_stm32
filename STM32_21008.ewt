@@ -19867,16 +19867,13 @@
             <group>
                 <name>task</name>
                 <file>
+                    <name>$extsource$\dual_motor_controller\task\dual_motor_ctrl_config.h</name>
+                </file>
+                <file>
                     <name>$extsource$\dual_motor_controller\task\task_dual_motor_ctrl.c</name>
                 </file>
                 <file>
                     <name>$extsource$\dual_motor_controller\task\task_dual_motor_ctrl.h</name>
-                </file>
-                <file>
-                    <name>$extsource$\dual_motor_controller\task\task_dual_motor_ctrl_sweep.c</name>
-                </file>
-                <file>
-                    <name>$extsource$\dual_motor_controller\task\task_dual_motor_ctrl_sweep.h</name>
                 </file>
             </group>
             <file>
