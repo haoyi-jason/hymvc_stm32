@@ -1,4 +1,9 @@
-/*Standard include*/
+/**
+ * @file       task_dual_motor_ctrl.c
+ * @addtogroup TASK_DUAL_MOTOR_CTRL
+ * @{
+ */
+ /*Standard include*/
 #include <stdbool.h>
 #include <stdint.h>
 #include <math.h>
@@ -22,16 +27,20 @@
 #include "dual_motor_ctrl_config.h"
 
 /*Define*/
-#define PIN_MOT1_AIN 0U
-#define PIN_MOT2_AIN 1U
+#define PIN_MOT1_AIN 0U                     /**< @brief  DAC channel of motor 1.*/
+#define PIN_MOT2_AIN 1U                     /**< @brief  DAC channel of motor 2.*/
 /*Constant*/
 
 /*Static variable*/
-static DMOTC_HANDLE_T dmotch;
+static DMOTC_HANDLE_T dmotch;               /**< @brief  Handle of dual_motor_controller./
 
 /*PID related*/
-static PID_HANDLE_T pospid;
-static PID_CFG_T pidcfg_pos = 
+static PID_HANDLE_T pospid;                 /**< @brief  Handle of position PID.*/        
+
+/**
+ * @brief  Configuration handle of position PID.
+ */
+static PID_CFG_T pidcfg_pos =
 {
   .cfg1 = 0,
   .kp = DMOTC_DFLT_P_PID_KP,
@@ -39,6 +48,9 @@ static PID_CFG_T pidcfg_pos =
   .kd = DMOTC_DFLT_P_PID_KD
 };
 
+/**
+ * @brief  Configuration handle of speed PID.
+ */
 static PID_CFG_T  pidcfg_speed =
 {
   .cfg1 = 0,
@@ -48,26 +60,27 @@ static PID_CFG_T  pidcfg_speed =
 };
 
 /*TQBC related*/
-static TQBC_CFG_T tqbccfg = {0.0f, 0.0f, 0.0f, 0.0f};
+static TQBC_CFG_T tqbccfg = {0.0f, 0.0f, 0.0f, 0.0f}; /**< @brief  Configuration handle of torque bias calculator. */
 
-static float out_max_2set = DMOTC_DFLT_OUT_MAX;
-static float out_min_2set = DMOTC_DFLT_OUT_MIN;
-static float gain_2set = DMOTC_DFLT_GAIN;
-static float zcp_2set = DMOTC_DFLT_ZCP;
-static float out_max_set = DMOTC_DFLT_OUT_MAX;
-static float out_min_set = DMOTC_DFLT_OUT_MIN;
-static float gain_set = DMOTC_DFLT_GAIN;
-static float zcp_set = DMOTC_DFLT_ZCP;
+static float out_max_2set = DMOTC_DFLT_OUT_MAX;       /**< @brief  Maximum bias torque to be set.*/
+static float out_min_2set = DMOTC_DFLT_OUT_MIN;       /**< @brief  Minimum bias torque to be set.*/
+static float gain_2set = DMOTC_DFLT_GAIN;             /**< @brief  Slop of bias torque to be set.*/
+static float zcp_2set = DMOTC_DFLT_ZCP;               /**< @brief  Zero crossing point to be set.*/
+static float out_max_set = DMOTC_DFLT_OUT_MAX;        /**< @brief  Maximum bias torque set.*/
+static float out_min_set = DMOTC_DFLT_OUT_MIN;        /**< @brief  Minimum bias torque set.*/
+static float gain_set = DMOTC_DFLT_GAIN;              /**< @brief  Slop of bias torque set.*/
+static float zcp_set = DMOTC_DFLT_ZCP;                /**< @brief  Zero crossing point set.*/
 
 /*Contorl related signal*/
-static bool dmotc_is_good = true;
-static bool start = false;
-static bool start_last = false;
-static tdmotc_mode_t mode = TDMOTC_MODE_S;
-static bool can_config = false;
+static bool dmotc_is_good = true;                     /**< @brief  Flag task is good.*/
+static bool start = false;                            /**< @brief  Flag start.*/
+static bool start_last = false;                       /**< @brief  Last value of start.*/
+static tdmotc_mode_t mode = TDMOTC_MODE_S;            /**< @brief  Mode of run.*/
+static bool can_config = false;                       /**< @brief  Flag parameter be config.*/
+
 /*Other parameter and signals*/
-static float tq_mot_max_abs = DMOTC_DFLT_TQ_MOT_MAX_ABS_PC;
-static float s_axis_max_abs = DMOTC_DFLT_S_AXIS_MAX_ABS_RPM;
+static float tq_mot_max_abs = DMOTC_DFLT_TQ_MOT_MAX_ABS_PC;   /**< @brief  Maximum motor torque in percentage.*/
+static float s_axis_max_abs = DMOTC_DFLT_S_AXIS_MAX_ABS_RPM;  /**< @brief  Maximum allowable axis speed in RPM.*/
 /*Messages*/
 //static uint8_t err_msg_tqbc_setconfig[] = "Failed on TQBC_SetConfig() \r\n";
 //static uint8_t err_msg_dmotc_init[] = "Failed on DMOTC_Init() \r\n";
@@ -81,12 +94,12 @@ static float s_axis_max_abs = DMOTC_DFLT_S_AXIS_MAX_ABS_RPM;
 //  USART_CR2_STOP1_BITS,
 //  0
 //};
-static float tq_mot_pc[2] = {0.0f, 0.0f};
-static float tq_mot_v[2] = {0.0f, 0.0f};
-static float speed_act_rpm = 0.0f;
-static long speed_act_lsb = 0;
+static float tq_mot_pc[2] = {0.0f, 0.0f};     /**< @brief  DA signal in percentage.*/
+static float tq_mot_v[2] = {0.0f, 0.0f};      /**< @brief  DA signal in voltage.*/
+static float speed_act_rpm = 0.0f;            /**< @brief  Axis actual speed in RPM.*/
+static long speed_act_lsb = 0;                /**< @brief  Axis actual speed in raw format.*/
 
-static float pos_act_deg = 0.0f;
+static float pos_act_deg = 0.0f;              /**< @brief  Axis actual position in degree.*/
 /*Global variable*/
 
 //float tq_mot_pc = 0.0f;
@@ -96,8 +109,8 @@ static float pos_act_deg = 0.0f;
 
 
 
-static float speed_cmd_rpm = 0.0f;
-static float pos_cmd_deg = 0.0f;
+static float speed_cmd_rpm = 0.0f;            /**< @brief  Axis speed command in RPM.*/
+static float pos_cmd_deg = 0.0f;              /**< @brief  Axis position command in degree.*/
 
 /*Declare private functions*/
 static float _GetPosDEG(void);
@@ -322,6 +335,11 @@ void tdmotc_algorithm_task_init(void)
   tp_dmotc = chThdCreateStatic(waDMOTC, sizeof(waDMOTC), NORMALPRIO, procDMOTC, NULL);
 }
 
+/**
+ * @brief      Start algorithm with specific mode.
+ *
+ * @param[in]  _mode  Mode to be run with.
+ */
 void tdmotc_Start(tdmotc_mode_t _mode)
 {
   if(dmotch.state == DMOTC_STATE_STOP)
@@ -344,12 +362,18 @@ void tdmotc_Start(tdmotc_mode_t _mode)
   }
 }
 
+/**
+ * @brief      Stop algorithm.
+ */
 void tdmotc_Stop(void)
 {
   /*Set start flag to false*/
   start = false;
 }
 
+/**
+ * @brief      Reset IO signals.
+ */
 void tdmotc_ResetIO(void)
 {
   tdmotc_SetSpeedCmd(0.0f);
@@ -377,7 +401,63 @@ void tdmotc_ResetFault(void)
   dmotc_is_good = true;
 }
 
+void tdmotc_SetSpeedCmd(float val)
+{
+  float _priv_axis_max_s = tdmotc_GetAxisSMaxAbs();
+  if(isfinite(val) && can_config)
+  {
+    /*Proceed*/
+    if(val > _priv_axis_max_s)
+    {
+      speed_cmd_rpm = _priv_axis_max_s;
+    }
+    else if(val < (-1.0f *_priv_axis_max_s))
+    {
+      speed_cmd_rpm = (-1.0f *_priv_axis_max_s);
+    }
+    else
+    {
+      speed_cmd_rpm = val;
+    }
+  }
+}
 
+float tdmotc_GetSpeedCmd(void)
+{
+  return speed_cmd_rpm;
+}
+
+void tdmotc_SetPosCmd(float val)
+{
+  if(isfinite(val) && can_config)
+  {
+    if(val > 358.0f)
+    {
+      pos_cmd_deg = 358.0f;
+    }
+    else if(val > 2.0f)
+    {
+      pos_cmd_deg = 2.0f;
+    }
+    else
+    {
+      pos_cmd_deg = val;
+    }
+  }
+}
+
+float tdmotc_GetPosCmd(void)
+{
+  return pos_cmd_deg;
+}
+
+/**
+ * @brief      Set PID parameters according to index
+ *
+ * @param[in]  pid        Index of PID handle
+ * @param[in]  pid_index  Index of PID parameter.
+ * @param[in]  val        Value to be set.
+ */
 void tdmotc_SetPID(uint8_t pid, uint8_t pid_index, float val)
 {
   if(isfinite(val) && can_config)
@@ -489,6 +569,15 @@ float tdmotc_GetPID(uint8_t pid, uint8_t pid_index)
   return value;
 }
 
+/**
+ * @brief      Set torque bias calculator parameters according to index
+ * 
+ * @param[in]  index  Index of parameters.
+ * @param[in]  val    Value to be set.
+ * 
+ * @note       Function "tdmotc_UpdateTQBC()" must be invoke after set in order
+ *             to update the equation. 
+ */
 void tdmotc_SetTQBC(uint8_t index, float val)
 {
   if(isfinite(val) && can_config)
@@ -548,6 +637,13 @@ void tdmotc_SetTQBC(uint8_t index, float val)
   }
 }
 
+/**
+ * @brief      Get parameter currently being used by torque bias calculator.
+ *
+ * @param[in]  index  Index of parameters.
+ *
+ * @return     valus of parameter.
+ */
 float tdmotc_GetTQBC(uint8_t index)
 {
   float value = 0.0f;
@@ -578,6 +674,9 @@ float tdmotc_GetTQBC(uint8_t index)
   return value;
 }
 
+/**
+ * @brief      Update equation of torque bias calculator.
+ */
 void tdmotc_UpdateTQBC(void)
 {
   if(can_config)
@@ -591,56 +690,6 @@ void tdmotc_UpdateTQBC(void)
       zcp_set = zcp_2set;
     }
   }
-}
-
-void tdmotc_SetSpeedCmd(float val)
-{
-  float _priv_axis_max_s = tdmotc_GetAxisSMaxAbs();
-  if(isfinite(val) && can_config)
-  {
-    /*Proceed*/
-    if(val > _priv_axis_max_s)
-    {
-      speed_cmd_rpm = _priv_axis_max_s;
-    }
-    else if(val < (-1.0f *_priv_axis_max_s))
-    {
-      speed_cmd_rpm = (-1.0f *_priv_axis_max_s);
-    }
-    else
-    {
-      speed_cmd_rpm = val;
-    }
-  }
-}
-
-float tdmotc_GetSpeedCmd(void)
-{
-  return speed_cmd_rpm;
-}
-
-void tdmotc_SetPosCmd(float val)
-{
-  if(isfinite(val) && can_config)
-  {
-    if(val > 358.0f)
-    {
-      pos_cmd_deg = 358.0f;
-    }
-    else if(val > 2.0f)
-    {
-      pos_cmd_deg = 2.0f;
-    }
-    else
-    {
-      pos_cmd_deg = val;
-    }
-  }
-}
-
-float tdmotc_GetPosCmd(void)
-{
-  return pos_cmd_deg;
 }
 
 void tdmotc_SetMotTqMaxAbs(float val)
@@ -727,3 +776,7 @@ int32_t tdmotc_ConvSig2CAN(float input)
   }
   return output;
 }
+
+/**
+ * @}
+ */
