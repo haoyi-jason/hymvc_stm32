@@ -20,7 +20,7 @@ extern "C" {
 /*Default valus*/
 /*Hardware config*/
 #define DMOTC_DFLT_TQ_MOT_MAX_ABS_PC  99.9f
-#define DMOTC_DFLT_S_AXIS_MAX_ABS_RPM 15.0f
+#define DMOTC_DFLT_S_AXIS_MAX_ABS_RPM 5.0f
 
 /*PID config*/  
 #define DMOTC_DFLT_P_PID_KP           5.0f

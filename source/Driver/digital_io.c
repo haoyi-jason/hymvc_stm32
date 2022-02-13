@@ -18,6 +18,10 @@ dio_def iso_io_out[] = {
   {OUTPUT_GPIO,GPIOE,12},
   {OUTPUT_GPIO,GPIOE,13},
   {OUTPUT_GPIO,GPIOE,14},
+  {OUTPUT_GPIO,GPIOE,15},
+  {OUTPUT_GPIO,GPIOD,8},
+  {OUTPUT_GPIO,GPIOD,9},
+  {OUTPUT_GPIO,GPIOD,10},
 };
 
 dio_def ttl_io[] = {
@@ -53,7 +57,7 @@ struct digital_io{
 static struct digital_io digital_io = {
   {ttl_io,16},
   {iso_io_in,8},
-  {iso_io_out,4}
+  {iso_io_out,8}
 };
 
 
@@ -89,6 +93,8 @@ void digital_init()
     for(uint8_t i=0;i<digital_io.iso_do.nofPads;i++){
       if(dio != NULL){
         palSetPadMode(dio->port,dio->pad, PAL_MODE_OUTPUT_PUSHPULL);
+        // set initial state to low
+        palClearPad(dio->port, dio->pad);
       }
       dio++;
     }

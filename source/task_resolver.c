@@ -27,6 +27,7 @@ static const SPIConfig spicfg_ad2s_dev0 = {
 static AD2S1210Config ad2s_config_dev0 = {
   &SPID5,
   &spicfg_ad2s_dev0,
+  0,
   RES_16b,
   GPIOF,6,
   GPIOB,8,
@@ -44,6 +45,7 @@ static AD2S1210Config ad2s_config_dev0 = {
 static AD2S1210Config ad2s_config_dev1 = {
   &SPID5,
   &spicfg_ad2s_dev0,
+  0,
   RES_16b,
   GPIOI,11,
   GPIOB,8,

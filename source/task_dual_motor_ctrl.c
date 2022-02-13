@@ -17,10 +17,11 @@
 
 /*Module include*/
 #include "task_dac.h"
-#include "dual_motor_ctrl.h"
-#include "saturation.h"
+#include "dual_motor_ctrl/dual_motor_ctrl.h"
+#include "dual_motor_ctrl/saturation.h"
 #include "task_resolver.h"
 #include "task_mbmaster.h"
+#include "digital_io.h"
 /*Other include*/
 
 /*Config file include*/
@@ -176,7 +177,7 @@ static THD_FUNCTION(procDMOTC ,p)
   {
     /*Run periodically*/
     /*State contol*/
-    if(start && dmotc_is_good)
+    if(start && dmotc_is_good )
     {
       /*Start signal detected and good*/
       if(!start_last)
@@ -215,12 +216,17 @@ static THD_FUNCTION(procDMOTC ,p)
           }
         }
         can_config = false;
-
-        modbus_master_WriteCtrl(1, 3);
-        chThdSleepMilliseconds(500);
-        modbus_master_WriteCtrl(2, 3);
-        chThdSleepMilliseconds(500);
+        // enable servo
+        digital_set_iso_out(4,1);
+        digital_set_iso_out(5,1);
+        digital_set_iso_out(6,1);
+        digital_set_iso_out(7,1);
+//        modbus_master_WriteCtrl(1, 3);
+//        chThdSleepMilliseconds(500);
+//        modbus_master_WriteCtrl(2, 3);
+//        chThdSleepMilliseconds(500);
         start_last = start;
+       // start = false;
       }
     }
     else
@@ -236,10 +242,15 @@ static THD_FUNCTION(procDMOTC ,p)
         analog_output_set_voltage(PIN_MOT1_AIN, &tq_mot_v[0]);
         analog_output_set_voltage(PIN_MOT2_AIN, &tq_mot_v[1]);
 
-        modbus_master_WriteCtrl(1, 0);
-        chThdSleepMilliseconds(500);
-        modbus_master_WriteCtrl(2, 0);
-        chThdSleepMilliseconds(500);
+        // disable servo
+        digital_set_iso_out(4,0);
+        digital_set_iso_out(5,0);
+        digital_set_iso_out(6,0);
+        digital_set_iso_out(7,0);
+//        modbus_master_WriteCtrl(1, 0);
+//        chThdSleepMilliseconds(500);
+//        modbus_master_WriteCtrl(2, 0);
+//        chThdSleepMilliseconds(500);
 
         start_last = start;
       }
@@ -277,9 +288,10 @@ static THD_FUNCTION(procDMOTC ,p)
       }
 
 
-      speed_act_lsb = _GetSpeedLSB();
-      speed_act_rpm = ((float)speed_act_lsb * -0.1f)/200.0f; // Using modus speed
+      //speed_act_lsb = _GetSpeedLSB();
+      //speed_act_rpm = ((float)speed_act_lsb * -0.1f)/200.0f; // Using modus speed
       //speed_act_rpm = (float)speed_act_lsb * 0.00381f;
+      speed_act_rpm = resolver_get_speed(0)*60.f;
   
       /*Run algorithm*/
       if(DMOTC_MSG_OK != DMOTC_Run(&dmotch,
@@ -393,7 +405,7 @@ tdmotc_mode_t tdmotc_GetMode(void)
 
 bool tdmotc_GetFault(void)
 {
-  return dmotc_is_good;
+  return !dmotc_is_good;
 }
 
 void tdmotc_ResetFault(void)
@@ -404,7 +416,8 @@ void tdmotc_ResetFault(void)
 void tdmotc_SetSpeedCmd(float val)
 {
   float _priv_axis_max_s = tdmotc_GetAxisSMaxAbs();
-  if(isfinite(val) && can_config)
+//  if(isfinite(val) && can_config)
+  if(isfinite(val))
   {
     /*Proceed*/
     if(val > _priv_axis_max_s)

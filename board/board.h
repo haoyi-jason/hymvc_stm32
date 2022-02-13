@@ -729,10 +729,10 @@
                                      PIN_MODE_INPUT(GPIOD_PIN5) |           \
                                      PIN_MODE_ALTERNATE(GPIOD_LCD_B2) |     \
                                      PIN_MODE_INPUT(GPIOD_PIN7) |           \
-                                     PIN_MODE_ALTERNATE(GPIOD_FMC_D13) |    \
-                                     PIN_MODE_ALTERNATE(GPIOD_FMC_D14) |    \
-                                     PIN_MODE_ALTERNATE(GPIOD_FMC_D15) |    \
-                                     PIN_MODE_INPUT(GPIOD_LCD_TE) |         \
+                                     PIN_MODE_OUTPUT(GPIOD_FMC_D13) |    \
+                                     PIN_MODE_OUTPUT(GPIOD_FMC_D14) |    \
+                                     PIN_MODE_OUTPUT(GPIOD_FMC_D15) |    \
+                                     PIN_MODE_OUTPUT(GPIOD_LCD_TE) |         \
                                      PIN_MODE_OUTPUT(GPIOD_LCD_RDX) |       \
                                      PIN_MODE_OUTPUT(GPIOD_LCD_WRX) |       \
                                      PIN_MODE_ALTERNATE(GPIOD_FMC_D0) |     \
@@ -777,10 +777,10 @@
                                      PIN_PUPDR_PULLUP(GPIOD_PIN5) |         \
                                      PIN_PUPDR_FLOATING(GPIOD_LCD_B2) |     \
                                      PIN_PUPDR_PULLUP(GPIOD_PIN7) |         \
-                                     PIN_PUPDR_FLOATING(GPIOD_FMC_D13) |    \
-                                     PIN_PUPDR_FLOATING(GPIOD_FMC_D14) |    \
-                                     PIN_PUPDR_FLOATING(GPIOD_FMC_D15) |    \
-                                     PIN_PUPDR_FLOATING(GPIOD_LCD_TE) |     \
+                                     PIN_PUPDR_PULLUP(GPIOD_FMC_D13) |    \
+                                     PIN_PUPDR_PULLUP(GPIOD_FMC_D14) |    \
+                                     PIN_PUPDR_PULLUP(GPIOD_FMC_D15) |    \
+                                     PIN_PUPDR_PULLUP(GPIOD_LCD_TE) |     \
                                      PIN_PUPDR_FLOATING(GPIOD_LCD_RDX) |    \
                                      PIN_PUPDR_FLOATING(GPIOD_LCD_WRX) |    \
                                      PIN_PUPDR_FLOATING(GPIOD_FMC_D0) |     \
@@ -809,9 +809,9 @@
                                      PIN_AFIO_AF(GPIOD_PIN5, 0U) |          \
                                      PIN_AFIO_AF(GPIOD_LCD_B2, 14U) |       \
                                      PIN_AFIO_AF(GPIOD_PIN7, 0U))
-#define VAL_GPIOD_AFRH              (PIN_AFIO_AF(GPIOD_FMC_D13, 12U) |      \
-                                     PIN_AFIO_AF(GPIOD_FMC_D14, 12U) |      \
-                                     PIN_AFIO_AF(GPIOD_FMC_D15, 12U) |      \
+#define VAL_GPIOD_AFRH              (PIN_AFIO_AF(GPIOD_FMC_D13, 0U) |      \
+                                     PIN_AFIO_AF(GPIOD_FMC_D14, 0U) |      \
+                                     PIN_AFIO_AF(GPIOD_FMC_D15, 0U) |      \
                                      PIN_AFIO_AF(GPIOD_LCD_TE, 0U) |        \
                                      PIN_AFIO_AF(GPIOD_LCD_RDX, 0U) |       \
                                      PIN_AFIO_AF(GPIOD_LCD_WRX, 0U) |       \
@@ -849,11 +849,11 @@
                                      PIN_MODE_ALTERNATE(GPIOE_FMC_D5) |     \
                                      PIN_MODE_ALTERNATE(GPIOE_FMC_D6) |     \
                                      PIN_MODE_ALTERNATE(GPIOE_FMC_D7) |     \
-                                     PIN_MODE_ALTERNATE(GPIOE_FMC_D8) |     \
-                                     PIN_MODE_ALTERNATE(GPIOE_FMC_D9) |     \
-                                     PIN_MODE_ALTERNATE(GPIOE_FMC_D10) |    \
-                                     PIN_MODE_ALTERNATE(GPIOE_FMC_D11) |    \
-                                     PIN_MODE_ALTERNATE(GPIOE_FMC_D12))
+                                     PIN_MODE_OUTPUT(GPIOE_FMC_D8) |     \
+                                     PIN_MODE_OUTPUT(GPIOE_FMC_D9) |     \
+                                     PIN_MODE_OUTPUT(GPIOE_FMC_D10) |    \
+                                     PIN_MODE_OUTPUT(GPIOE_FMC_D11) |    \
+                                     PIN_MODE_OUTPUT(GPIOE_FMC_D12))
 #define VAL_GPIOE_OTYPER            (PIN_OTYPE_PUSHPULL(GPIOE_FMC_NBL0) |   \
                                      PIN_OTYPE_PUSHPULL(GPIOE_FMC_NBL1) |   \
                                      PIN_OTYPE_PUSHPULL(GPIOE_PIN2) |       \

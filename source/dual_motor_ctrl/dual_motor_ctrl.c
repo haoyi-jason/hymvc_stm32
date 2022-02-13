@@ -247,7 +247,8 @@ dmotc_msg_t DMOTC_Run(DMOTC_HANDLE_T *ph,
       TQBC_Run(&(ph->tqbc), ph->data.axis_tq_cmd, &(ph->data.mot_tq_bias));
       ph->data.axis_tq_cmd = SAT_fSat(ph->data.axis_tq_cmd, (ph->mot_tq_min)/(ph->gain_atq2mtq), (ph->mot_tq_max)/(ph->gain_atq2mtq));
       _mot_tq_set_bef_bias = ph->data.axis_tq_cmd * ph->gain_atq2mtq;
-      ph->data.mot1_tq_set = SAT_fSat(_mot_tq_set_bef_bias - ph->data.mot_tq_bias, ph->mot_tq_min, ph->mot_tq_max);
+//      ph->data.mot1_tq_set = SAT_fSat(_mot_tq_set_bef_bias - ph->data.mot_tq_bias, ph->mot_tq_min, ph->mot_tq_max);
+      ph->data.mot1_tq_set = SAT_fSat(_mot_tq_set_bef_bias + ph->data.mot_tq_bias, ph->mot_tq_min, ph->mot_tq_max);
       ph->data.mot2_tq_set = SAT_fSat(_mot_tq_set_bef_bias + ph->data.mot_tq_bias, ph->mot_tq_min, ph->mot_tq_max);
 
       /*Assign output*/
