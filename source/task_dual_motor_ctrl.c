@@ -327,9 +327,9 @@ static THD_FUNCTION(procDMOTC ,p)
 /*Static functions*/
 static float _GetPosDEG(void)
 {
-  float output = 0;
+  float output = 0.0f;
   /*Implement get method and conversion here*/
-  output = (resolver_get_position(0) / 60.0f);
+  output = (resolver_get_position(0) * 0.016667f);
   return output;
 }
 
@@ -416,7 +416,6 @@ void tdmotc_ResetFault(void)
 void tdmotc_SetSpeedCmd(float val)
 {
   float _priv_axis_max_s = tdmotc_GetAxisSMaxAbs();
-//  if(isfinite(val) && can_config)
   if(isfinite(val))
   {
     /*Proceed*/
@@ -442,15 +441,15 @@ float tdmotc_GetSpeedCmd(void)
 
 void tdmotc_SetPosCmd(float val)
 {
-  if(isfinite(val) && can_config)
+  if(isfinite(val))
   {
-    if(val > 358.0f)
+    if(val > 345.0f)
     {
-      pos_cmd_deg = 358.0f;
+      pos_cmd_deg = 345.0f;
     }
-    else if(val > 2.0f)
+    else if(val < 15.0f)
     {
-      pos_cmd_deg = 2.0f;
+      pos_cmd_deg = 15.0f;
     }
     else
     {

@@ -23,12 +23,12 @@ extern "C" {
 #define DMOTC_DFLT_S_AXIS_MAX_ABS_RPM 5.0f
 
 /*PID config*/  
-#define DMOTC_DFLT_P_PID_KP           5.0f
+#define DMOTC_DFLT_P_PID_KP           0.5f
 #define DMOTC_DFLT_P_PID_KI           0.0f
 #define DMOTC_DFLT_P_PID_KD           0.0f
 
-#define DMOTC_DFLT_S_PID_KP           3.0f
-#define DMOTC_DFLT_S_PID_KI           0.01f
+#define DMOTC_DFLT_S_PID_KP           1.0f
+#define DMOTC_DFLT_S_PID_KI           0.025f
 #define DMOTC_DFLT_S_PID_KD           0.0f
 
 /*TQBC config*/
