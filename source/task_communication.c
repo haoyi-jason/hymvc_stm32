@@ -119,6 +119,11 @@ static int16_t pid_get_cmd_value(uint8_t mode, uint8_t cmd_index)
     output_f = tdmotc_GetPosCmd();
     break;
 
+    case TDMOTC_MODE_P2:
+    output_f = tdmotc_GetPosCmd();
+    break;
+
+
     default:
     break;
   }
@@ -500,6 +505,10 @@ int8_t pid_command(CANRxFrame *prx,CANTxFrame *ptx)
 
       case TDMOTC_MODE_P:
       tdmotc_SetPosCmd(fv);
+      break;
+
+      case TDMOTC_MODE_P2:
+      tdmotc_SetPosCmd2(fv);
       break;
 
       default:

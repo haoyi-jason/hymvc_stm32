@@ -444,6 +444,25 @@ void tdmotc_SetPosCmd(float val)
   }
 }
 
+void tdmotc_SetPosCmd2(float val)
+{
+  if(isfinite(val))
+  {
+    if(val > 358.0f)
+    {
+      pos_cmd_deg = 358.0f;
+    }
+    else if(val < 2.0f)
+    {
+      pos_cmd_deg = 2.0f;
+    }
+    else
+    {
+      pos_cmd_deg = val;
+    }
+  }
+}
+
 float tdmotc_GetPosCmd(void)
 {
   return pos_cmd_deg;
