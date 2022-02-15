@@ -82,33 +82,12 @@ static bool can_config = false;                       /**< @brief  Flag paramete
 /*Other parameter and signals*/
 static float tq_mot_max_abs = DMOTC_DFLT_TQ_MOT_MAX_ABS_PC;   /**< @brief  Maximum motor torque in percentage.*/
 static float s_axis_max_abs = DMOTC_DFLT_S_AXIS_MAX_ABS_RPM;  /**< @brief  Maximum allowable axis speed in RPM.*/
-/*Messages*/
-//static uint8_t err_msg_tqbc_setconfig[] = "Failed on TQBC_SetConfig() \r\n";
-//static uint8_t err_msg_dmotc_init[] = "Failed on DMOTC_Init() \r\n";
-//static uint8_t err_msg_dmotc_start[] = "Failed on DMOTC_Start \r\n";
-//static uint8_t err_msg_dmotc_run[] = "Failed on DMOTC_Run() \r\n";
-
-//static const SerialConfig baud_115200_8N1 =
-//{
-//  115200,
-//  0,
-//  USART_CR2_STOP1_BITS,
-//  0
-//};
 static float tq_mot_pc[2] = {0.0f, 0.0f};     /**< @brief  DA signal in percentage.*/
 static float tq_mot_v[2] = {0.0f, 0.0f};      /**< @brief  DA signal in voltage.*/
 static float speed_act_rpm = 0.0f;            /**< @brief  Axis actual speed in RPM.*/
 static long speed_act_lsb = 0;                /**< @brief  Axis actual speed in raw format.*/
 
 static float pos_act_deg = 0.0f;              /**< @brief  Axis actual position in degree.*/
-/*Global variable*/
-
-//float tq_mot_pc = 0.0f;
-
-//int16_t tq_mot1_lsb = 0;
-//int16_t tq_mot2_lsb = 0;
-
-
 
 static float speed_cmd_rpm = 0.0f;            /**< @brief  Axis speed command in RPM.*/
 static float pos_cmd_deg = 0.0f;              /**< @brief  Axis position command in degree.*/
@@ -128,15 +107,11 @@ static THD_FUNCTION(procDMOTC ,p)
   float _priv_speed_cmd_raw_rpm = 0.0f;
   /*Initialization*/
 
-  /*Start SD6*/
-  //sdStart(&SD6, &baud_115200_8N1);
-
   /*Set default config*/
   if(DMOTC_MSG_OK != DMOTC_SetTQBCConfig(&tqbccfg, out_max_set, out_min_set, gain_set, zcp_set))
   {
     /*Torque bias calculator setup failed*/
     dmotc_is_good = false;
-    //sdWrite(&SD6, err_msg_tqbc_setconfig, sizeof(err_msg_tqbc_setconfig));
   }
 
   /*Initialize*/
@@ -151,7 +126,6 @@ static THD_FUNCTION(procDMOTC ,p)
     {
       /*Initialization failed*/
       dmotc_is_good = false;
-      //sdWrite(&SD6, err_msg_dmotc_init, sizeof(err_msg_dmotc_init));
     }
   }
 
@@ -163,15 +137,6 @@ static THD_FUNCTION(procDMOTC ,p)
 
 
   /*Start algorithm*/
-  //if(dmotc_is_good)
-  //{
-  //  if(DMOTC_MSG_OK != DMOTC_Start(&dmotch))
-  //  {
-  //    /*Start failed*/
-  //    dmotc_is_good = false;
-  //    //sdWrite(&SD6, err_msg_dmotc_start, sizeof(err_msg_dmotc_start));
-  //  }
-  //}
 
   while(!chThdShouldTerminateX())
   {
@@ -231,6 +196,7 @@ static THD_FUNCTION(procDMOTC ,p)
     }
     else
     {
+      /*Start signal off or not good*/
       if(start_last)
       {
         /*Stopping*/
@@ -252,7 +218,7 @@ static THD_FUNCTION(procDMOTC ,p)
 //        modbus_master_WriteCtrl(2, 0);
 //        chThdSleepMilliseconds(500);
 
-        start_last = start;
+        start_last = false;
       }
       else
       {
@@ -280,6 +246,28 @@ static THD_FUNCTION(procDMOTC ,p)
         /*Saturation*/
         _priv_speeed_cmd_rpm = SAT_fSat(_priv_speed_cmd_raw_rpm, (-1.0f * s_axis_max_abs), s_axis_max_abs);
       }
+      else if(TDMOTC_MODE_P2 == mode)
+      {
+        /*Position mode 2, run at fix speed to target position and stop*/
+        _priv_pos_cmd = tdmotc_GetPosCmd();
+        pos_act_deg = _GetPosDEG();
+
+        if((_priv_pos_cmd - pos_act_deg) > DMOTC_DFLT_POS2_THOLD)
+        {
+          /*Run with positive speed*/
+          _priv_speeed_cmd_rpm = DMOTC_DFLT_SPEED;
+        }
+        else if((_priv_pos_cmd - pos_act_deg) < (-1.0f * DMOTC_DFLT_POS2_THOLD))
+        {
+          /*Run with negative speed*/
+          _priv_speeed_cmd_rpm = -1.0f * DMOTC_DFLT_SPEED;
+        }
+        else
+        {
+          /*Stop*/
+          _priv_speeed_cmd_rpm = 0.0f;
+        }
+      }
       else
       {
         /*Run TDMOTC_MODE_S in default*/
@@ -302,16 +290,9 @@ static THD_FUNCTION(procDMOTC ,p)
       {
         /*Run failed*/
         dmotc_is_good = false;
-        //sdWrite(&SD6, err_msg_dmotc_run, sizeof(err_msg_dmotc_run));
       }
   
       /*Set output*/
-      //tq_mot1_lsb = (int16_t)(tq_mot1_pc / 3180.0f);
-      //tq_mot2_lsb = (int16_t)(tq_mot2_pc / 3180.0f);
-      
-      //analog_output_set_data(PIN_MOT1_AIN, &tq_mot1_lsb);
-      //analog_output_set_data(PIN_MOT2_AIN, &tq_mot2_lsb);
-
       tq_mot_v[0] = tq_mot_pc[0] * 0.1f;
       tq_mot_v[1] = tq_mot_pc[1] * 0.1f;
 
@@ -366,6 +347,11 @@ void tdmotc_Start(tdmotc_mode_t _mode)
       case TDMOTC_MODE_P:
       start = true;
       mode = TDMOTC_MODE_P;
+      break;
+
+      case TDMOTC_MODE_P2:
+      start = true;
+      mode = TDMOTC_MODE_P2;
       break;
 
       default:

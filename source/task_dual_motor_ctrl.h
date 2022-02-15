@@ -26,6 +26,7 @@ typedef uint8_t   tdmotc_msg_t;
 /*Define mode_t*/
 #define TDMOTC_MODE_S            ((tdmotc_mode_t)0x00)   /**<  @brief  Speed control mode.*/
 #define TDMOTC_MODE_P            ((tdmotc_mode_t)0x01)   /**<  @brief  Position control mode.*/
+#define TDMOTC_MODE_P2           ((tdmotc_mode_t)0x02)   /**<  @brief  Fix speed position control mode.*/
 
 /*Define PID*/
 #define TDMOTC_PID_S             0U                      /**< @brief  Index of speed PID.*/

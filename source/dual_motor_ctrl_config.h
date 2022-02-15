@@ -37,6 +37,9 @@ extern "C" {
 #define DMOTC_DFLT_GAIN               -0.3f
 #define DMOTC_DFLT_ZCP                80.0f
 
+/*Position 2 mode config*/
+#define DMOTC_DFLT_POS2_THOLD       1.0f
+#define DMOTC_DFLT_SPEED            2.0f
 
 #ifdef __cplusplus
 }
