@@ -19,6 +19,9 @@
 extern "C" {
 #endif
 
+/*Standard include*/
+#include <stdint.h>
+  
 /*Typedef*/
 typedef uint8_t   tdmotc_mode_t;    /**<  @brief  Mode type.*/ 
 typedef uint8_t   tdmotc_msg_t;

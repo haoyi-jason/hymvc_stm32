@@ -102,6 +102,8 @@ static THD_WORKING_AREA(waDMOTC,1024);
 static THD_FUNCTION(procDMOTC ,p)
 {
   /*Declare local variable*/
+  systime_t prev = chVTGetSystemTime(); /* Current system time.*/
+
   float _priv_speeed_cmd_rpm = 0.0f;
   float _priv_pos_cmd = 0.0f;
   float _priv_speed_cmd_raw_rpm = 0.0f;
@@ -301,7 +303,7 @@ static THD_FUNCTION(procDMOTC ,p)
     }
 
     /*Sleep*/
-    chThdSleepMilliseconds(10);
+    prev = chThdSleepUntilWindowed(prev, chTimeAddX(prev, TIME_MS2I(10)));
   }
 }
 
