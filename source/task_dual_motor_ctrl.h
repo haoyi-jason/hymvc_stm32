@@ -45,6 +45,12 @@ typedef uint8_t   tdmotc_msg_t;
 #define TDMOTC_TQBC_ID_GAIN      2U                      /**< @brief  Index of slop of bias torque.*/
 #define TDMOTC_TQBC_ID_ZCP       3U                      /**< @brief  Index of zero crossing point.*/
 
+/*Define Position controller*/
+#define TDMOTC_PCCFG_ID_PERR_THOLD  0U
+#define TDMOTC_PCCFG_ID_S_CMD_MIN   1U
+#define TDMOTC_PCCFG_ID_S_CMD_MAX   2U
+#define TDMOTC_PCCFG_ID_KP          3U
+
 /*Define signal gain*/
 #define TDMOTC_CAN2SIG_GAIN_F    (1.0f/10000.0f)         /**< @brief  Conversion gain from can format (int32_t) to float.*/
 
@@ -82,6 +88,9 @@ float tdmotc_GetAxisSMaxAbs(void);
 float tdmotc_GetAxisSpeedAct(void);
 float tdmotc_GetMotTqActV(uint8_t index);
 bool tdmotc_GetIsStart(void);
+void tdmotc_SetPCCFG(uint8_t index, float val)
+float tdmotc_GetPCCFG(uint8_t index)
+
 float tdmotc_ConvCAN2Sig(int32_t input);
 int32_t tdmotc_ConvSig2CAN(float input);
 

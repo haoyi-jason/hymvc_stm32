@@ -116,7 +116,7 @@ static int16_t pid_get_cmd_value(uint8_t mode, uint8_t cmd_index)
     break;
 
     case TDMOTC_MODE_P:
-    output_f = tdmotc_GetPosCmd();
+    output_f = tpcmdh_GetPosCmd();
     break;
 
     case TDMOTC_MODE_P2:
@@ -140,7 +140,8 @@ static float pid_get_para_value(uint8_t cmd_index)
   switch (cmd_index)
   {
     case CAN_GSID_KP_P:
-    output_f = tdmotc_GetPID(TDMOTC_PID_P, TDMOTC_PID_ID_P);
+    //output_f = tdmotc_GetPID(TDMOTC_PID_P, TDMOTC_PID_ID_P);
+    output_f = tdmotc_GetPCCFG(TDMOTC_PCCFG_ID_KP);
     break;
 
     case CAN_GSID_KP_S:
@@ -181,6 +182,18 @@ static float pid_get_para_value(uint8_t cmd_index)
 
     case CAN_GSID_ZCP:
     output_f = tdmotc_GetTQBC(TDMOTC_TQBC_ID_ZCP);
+    break;
+
+    case CAN_GSID_PC_PERR_THOLD:
+    output_f = tdmotc_GetPCCFG(TDMOTC_PCCFG_ID_PERR_THOLD);
+    break;
+
+    case CAN_GSID_PC_S_CMD_MIN:
+    output_f = tdmotc_GetPCCFG(TDMOTC_PCCFG_ID_S_CMD_MIN);
+    break;
+
+    case CAN_GSID_PC_S_CMD_MAX:
+    output_f = tdmotc_GetPCCFG(TDMOTC_PCCFG_ID_S_CMD_MAX);
     break;
 
     case CAN_GSID_UPDATE:
@@ -504,7 +517,8 @@ int8_t pid_command(CANRxFrame *prx,CANTxFrame *ptx)
       break;
 
       case TDMOTC_MODE_P:
-      tdmotc_SetPosCmd(fv);
+      //tdmotc_SetPosCmd(fv);
+      tpcmdh_SetPosCmd(fv);
       break;
 
       case TDMOTC_MODE_P2:
@@ -565,7 +579,8 @@ int8_t pid_parameter(CANRxFrame *prx,CANTxFrame *ptx)
       switch (cmd_index)
       {
         case CAN_GSID_KP_P:
-        tdmotc_SetPID(TDMOTC_PID_P, TDMOTC_PID_ID_P, cmd_value_f);
+        //tdmotc_SetPID(TDMOTC_PID_P, TDMOTC_PID_ID_P, cmd_value_f);
+        tdmotc_SetPCCFG(TDMOTC_PCCFG_ID_KP, cmd_value_f);
         break;
 
         case CAN_GSID_KP_S:
@@ -610,6 +625,18 @@ int8_t pid_parameter(CANRxFrame *prx,CANTxFrame *ptx)
 
         case CAN_GSID_UPDATE:
         tdmotc_UpdateTQBC();
+        break;
+
+        case CAN_GSID_PC_PERR_THOLD:
+        tdmotc_SetPCCFG(TDMOTC_PCCFG_ID_PERR_THOLD, cmd_value_f);
+        break;
+
+        case CAN_GSID_PC_S_CMD_MIN:
+        tdmotc_SetPCCFG(TDMOTC_PCCFG_ID_S_CMD_MIN, cmd_value_f);
+        break;
+
+        case CAN_GSID_PC_S_CMD_MAX:
+        tdmotc_SetPCCFG(TDMOTC_PCCFG_ID_S_CMD_MAX, cmd_value_f);
         break;
 
         default:

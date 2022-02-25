@@ -72,6 +72,13 @@ static float out_min_set = DMOTC_DFLT_OUT_MIN;        /**< @brief  Minimum bias 
 static float gain_set = DMOTC_DFLT_GAIN;              /**< @brief  Slop of bias torque set.*/
 static float zcp_set = DMOTC_DFLT_ZCP;                /**< @brief  Zero crossing point set.*/
 
+/*Position control related*/
+static POSC_CMD_HANDLE_T pccmdh = DFLT_INIT_POSC_CMD_HANDLE_T(); /**< @brief  Position controller data handle.*/
+/**
+ * @brief  Configuration handle of position PID.
+ */
+static POSC_CFG_HANDLE_T pccfgh = INIT_POSC_CFG_HANDLE_T(POSC_ON_THOLD_DEG, DMOTC_DFLT_POS_S_MIN, DMOTC_DFLT_POS_S_MAX, DMOTC_DFLT_P_KP);
+
 /*Contorl related signal*/
 static bool dmotc_is_good = true;                     /**< @brief  Flag task is good.*/
 static bool start = false;                            /**< @brief  Flag start.*/
@@ -107,6 +114,9 @@ static THD_FUNCTION(procDMOTC ,p)
   float _priv_speeed_cmd_rpm = 0.0f;
   float _priv_pos_cmd = 0.0f;
   float _priv_speed_cmd_raw_rpm = 0.0f;
+
+  //POSC_CMD_HANDLE_T _priv_pccmdh = DFLT_INIT_POSC_CMD_HANDLE_T();
+
   /*Initialization*/
 
   /*Set default config*/
@@ -235,18 +245,14 @@ static THD_FUNCTION(procDMOTC ,p)
       if(TDMOTC_MODE_P == mode)
       {
         /*Get input*/
-        _priv_pos_cmd = tdmotc_GetPosCmd();
+        chSysLock();
+        pccmdh.pos_cmd_u16 = tpcmdh_GetPosCmdU16();
+        pccmdh.direction_cmd = tpcmdh_GetDirection();
+        chSysUnlock();
+        //_priv_pos_cmd = tdmotc_GetPosCmd();
         pos_act_deg = _GetPosDEG();
 
-        /*Run position PID*/
-        if(PID_MSG_OK != PID_RunPID(&pospid, _priv_pos_cmd, pos_act_deg, _priv_speeed_cmd_rpm, &_priv_speed_cmd_raw_rpm))
-        {
-          /*Pos PID run failed*/
-          dmotc_is_good = false;
-        }
-
-        /*Saturation*/
-        _priv_speeed_cmd_rpm = SAT_fSat(_priv_speed_cmd_raw_rpm, (-1.0f * s_axis_max_abs), s_axis_max_abs);
+        _priv_speeed_cmd_rpm = POSC_Run(&ppcmdh, &pccfgh, POSC_ConvertDeg2U16(pos_act_deg));
       }
       else if(TDMOTC_MODE_P2 == mode)
       {
@@ -779,6 +785,92 @@ bool tdmotc_GetIsStart(void)
   return output;
 }
 
+
+void tdmotc_SetPCCFG(uint8_t index, float val)
+{
+  if(isfinite(val) && can_config)
+  {
+    switch (index)
+    {
+      case TDMOTC_PCCFG_ID_PERR_THOLD:
+      POSC_SetCfgPErrThold(&pccfgh, val);
+      break;
+
+      case TDMOTC_PCCFG_ID_S_CMD_MIN:
+      if(val < 0.0f)
+      {
+        POSC_SetCfgSCmdMin(&pccfgh, 0.0f);
+      }
+      else
+      {
+        POSC_SetCfgSCmdMin(&pccfgh, val);
+      }
+      break;
+      
+      case TDMOTC_PCCFG_ID_S_CMD_MAX:
+      if(val < 0.0f)
+      {
+        POSC_SetCfgSCmdMax(&pccfgh, 0.0f);
+      }
+      else
+      {
+        POSC_SetCfgSCmdMax(&pccfgh, val);
+      }
+      break;
+      
+      case TDMOTC_PCCFG_ID_KP:
+      if(val < 0.0f)
+      {
+        POSC_SetCfgKp(&pccfgh, 0.0f);
+      }
+      else if( val > 1.0f)
+      {
+        POSC_SetCfgKp(&pccfgh, 1.0f);
+      }
+      else
+      {
+        POSC_SetCfgKp(&pccfgh, val);
+      }
+      break;
+
+      default:
+      /*Invalid index*/
+      break;
+    }
+  }
+}
+
+float tdmotc_GetPCCFG(uint8_t index)
+{
+  float retval = 0.0f;
+
+  switch (index)
+  {
+
+    case TDMOTC_PCCFG_ID_PERR_THOLD:
+    retval = POSC_GetCfgPErrThold(&pccfgh);
+    break;
+
+    case TDMOTC_PCCFG_ID_S_CMD_MIN:
+    retval = POSC_GetCfgSCmdMin(&pccfgh);
+    break;
+    
+    case TDMOTC_PCCFG_ID_S_CMD_MAX:
+    retval = POSC_GetCfgSCmdMax(&pccfgh);
+    break;
+    
+    case TDMOTC_PCCFG_ID_KP:
+    retval = POSC_GetCfKp(&pccfgh);
+    break;
+
+    default:
+    /*Invalid index*/
+    break;
+  }
+
+  return retval;
+}
+
 float tdmotc_ConvCAN2Sig(int32_t input)
 {
   float output = 0.0f;
@@ -795,6 +887,8 @@ int32_t tdmotc_ConvSig2CAN(float input)
   }
   return output;
 }
+
+
 
 /**
  * @}

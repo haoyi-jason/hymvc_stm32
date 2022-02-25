@@ -15,5 +15,8 @@ void task_communication_init();
 #define CAN_GSID_G               10U
 #define CAN_GSID_ZCP             11U
 #define CAN_GSID_UPDATE          12U
+#define CAN_GSID_PC_PERR_THOLD   13U
+#define CAN_GSID_PC_S_CMD_MIN    14U
+#define CAN_GSID_PC_S_CMD_MAX    15U
 
 #endif
