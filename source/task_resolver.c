@@ -125,3 +125,10 @@ float resolver_get_position(uint8_t id)
   return 0;
 }
 
+float resolver_get_position_deg(uint8_t id)
+{
+  if(id < 2){
+    return (ad2s1210[id].currentAngle * 0.016667f); 
+  }
+  return 0.0f;
+}
