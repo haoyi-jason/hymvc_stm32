@@ -30,6 +30,7 @@ typedef uint16_t pos_u16t;    /**<  @brief  Position type in u16. Range from 0 -
 #define   POSC_DEG_MIN        0.0f
 #define   POSC_POSU16_MAX     UINT16_MAX
 #define   POSC_ON_THOLD_DEG   0.5f
+#define   POSC_ON_THOLD_U16   91U
 #define   POSC_PREGAIN_1      0.001f
 
 #define   POSC_ALT_DIR_THOLD_U16  ((pos_u16t)36408) /*200.0 deg*/
@@ -52,12 +53,12 @@ typedef struct
   float kp;
 } POSC_CFG_HANDLE_T;
 
-#define INIT_POSC_CFG_HANDLE_T(thold, s_min, s_max, kp)\
+#define INIT_POSC_CFG_HANDLE_T(thold, s_min, s_max, val_kp)\
 {\
   .pos_err_thold_u16 = thold,\
   .s_cmd_min = s_min,\
   .s_cmd_max = s_max,\
-  .kp = kp\
+  .kp = val_kp\
 }
 
 
@@ -73,11 +74,11 @@ float    POSC_ConvertU162Deg(pos_u16t degree_u16);
 void POSC_SetCfgPErrThold(POSC_CFG_HANDLE_T *ppccfgh, float val);
 float POSC_GetCfgPErrThold(POSC_CFG_HANDLE_T *ppccfgh);
 void POSC_SetCfgSCmdMin(POSC_CFG_HANDLE_T *ppccfgh, float val);
-float POSC_GetCfSCmdMin(POSC_CFG_HANDLE_T *ppccfgh);
+float POSC_GetCfgSCmdMin(POSC_CFG_HANDLE_T *ppccfgh);
 void POSC_SetCfgSCmdMax(POSC_CFG_HANDLE_T *ppccfgh, float val);
-float POSC_GetCfSCmdMax(POSC_CFG_HANDLE_T *ppccfgh);
+float POSC_GetCfgSCmdMax(POSC_CFG_HANDLE_T *ppccfgh);
 void POSC_SetCfgKp(POSC_CFG_HANDLE_T *ppccfgh, float val);
-float POSC_GetCfKp(POSC_CFG_HANDLE_T *ppccfgh);
+float POSC_GetCfgKp(POSC_CFG_HANDLE_T *ppccfgh);
 
 #ifdef __cplusplus
 }

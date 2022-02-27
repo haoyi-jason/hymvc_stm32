@@ -20141,6 +20141,21 @@
                 <name>$PROJ_DIR$\source\MBMPort\mbporttimer.c</name>
             </file>
         </group>
+        <group>
+            <name>Position_Control</name>
+            <file>
+                <name>$PROJ_DIR$\source\pos_ctrl.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\source\pos_ctrl.h</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\source\task_pos_cmd_handler.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\source\task_pos_cmd_handler.h</name>
+            </file>
+        </group>
         <file>
             <name>$PROJ_DIR$\source\can_frame_handler.c</name>
         </file>

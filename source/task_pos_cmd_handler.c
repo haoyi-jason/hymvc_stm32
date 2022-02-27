@@ -1,6 +1,8 @@
 /*Standard include*/
 #include <stdint.h>
 #include <stdbool.h>
+#include <string.h>
+#include <math.h>
 
 /*Chibios include*/
 #include "ch.h"
@@ -17,7 +19,7 @@
 
 struct runTime{
   thread_t *self;
-  binary_semaphore_t pcmdh_bsem;
+  binary_semaphore_t pccmdh_bsem;
   float    pos_cmd_user;
   POSC_CMD_HANDLE_T pccmdh;
 };
@@ -40,28 +42,28 @@ static THD_FUNCTION(procPCMDH ,p)
   /*Initialization*/
   while(!chThdShouldTerminateX())
   {
-    if(MSG_OK == chBSemWaitTimeout(&runTime.pcmdh_bsem, TIME_MS2ST(500)))
+    if(MSG_OK == chBSemWaitTimeout(&runTime.pccmdh_bsem, TIME_MS2I(500)))
     {
       /*Semaphore taken, proceed.*/
       /*Update input signal*/
       _privpccmdh.pos_cmd_u16 = POSC_ConvertDeg2U16(runTime.pos_cmd_user);
-      _priv_pos_act_u16 = POSC_ConvertDeg2U16(resolver_get_position_deg(0))
+      _priv_pos_act_u16 = POSC_ConvertDeg2U16(resolver_get_position_deg(0));
       _priv_speed_act = resolver_get_speed(0);
 
       if(_priv_speed_act > 0.005f)
       {
         /*Rotate in positive direction*/
-        _privpccmdh.direction_cmd = tpcmdh_CalcDirection(true, _priv_pos_cmd, _priv_pos_act_u16, POSC_ALT_DIR_THOLD_U16);
+        _privpccmdh.direction_cmd = tpcmdh_CalcDirection(true, _privpccmdh.pos_cmd_u16, _priv_pos_act_u16, POSC_ALT_DIR_THOLD_U16);
       }
       else if(_priv_speed_act < -0.005f)
       {
         /*Rotate in negative direction*/
-        _privpccmdh.direction_cmd = tpcmdh_CalcDirection(false, _priv_pos_cmd, _priv_pos_act_u16, POSC_ALT_DIR_THOLD_U16);
+        _privpccmdh.direction_cmd = tpcmdh_CalcDirection(false, _privpccmdh.pos_cmd_u16, _priv_pos_act_u16, POSC_ALT_DIR_THOLD_U16);
       }
       else
       {
         /*Stop or very slow at the moment*/
-        _privpccmdh.direction_cmd = tpcmdh_CalcDirection(true, _priv_pos_cmd, _priv_pos_act_u16, POSC_POSU16_180DEG);
+        _privpccmdh.direction_cmd = tpcmdh_CalcDirection(true, _privpccmdh.pos_cmd_u16, _priv_pos_act_u16, POSC_POSU16_180DEG);
       }
 
       /*Write to runTime*/
@@ -96,7 +98,7 @@ bool tpcmdh_CalcDirection(bool dir_curr, pos_u16t cmd, pos_u16t act, pos_u16t th
 {
   if(POSC_CalcPerr(dir_curr, cmd, act) > thold)
   {
-    dircurr != dir_curr;
+    dir_curr != dir_curr;
   }
 
   return dir_curr;
@@ -121,7 +123,7 @@ void tpcmdh_SetPosCmd(float val)
       runTime.pos_cmd_user = val;
     }
   }
-  chBSemSignal(&runTime.pcmdh_bsem);
+  chBSemSignal(&runTime.pccmdh_bsem);
 }
 
 float tpcmdh_GetPosCmd(void)

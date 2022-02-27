@@ -3,10 +3,6 @@
 #include <string.h>
 #include <math.h>
 
-/*Chibios include*/
-//#include "ch.h"
-//#include "hal.h"
-
 /*Self include*/
 #include "pos_ctrl.h"
 
@@ -159,7 +155,7 @@ void POSC_SetCfgKp(POSC_CFG_HANDLE_T *ppccfgh, float val)
   
 }
 
-float POSC_GetCfKp(POSC_CFG_HANDLE_T *ppccfgh)
+float POSC_GetCfgKp(POSC_CFG_HANDLE_T *ppccfgh)
 {
   float retval = 0.0f;
 

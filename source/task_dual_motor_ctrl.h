@@ -88,8 +88,8 @@ float tdmotc_GetAxisSMaxAbs(void);
 float tdmotc_GetAxisSpeedAct(void);
 float tdmotc_GetMotTqActV(uint8_t index);
 bool tdmotc_GetIsStart(void);
-void tdmotc_SetPCCFG(uint8_t index, float val)
-float tdmotc_GetPCCFG(uint8_t index)
+void tdmotc_SetPCCFG(uint8_t index, float val);
+float tdmotc_GetPCCFG(uint8_t index);
 
 float tdmotc_ConvCAN2Sig(int32_t input);
 int32_t tdmotc_ConvSig2CAN(float input);

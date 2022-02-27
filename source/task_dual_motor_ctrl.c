@@ -20,8 +20,11 @@
 #include "dual_motor_ctrl/dual_motor_ctrl.h"
 #include "dual_motor_ctrl/saturation.h"
 #include "task_resolver.h"
-#include "task_mbmaster.h"
+//#include "task_mbmaster.h"
 #include "digital_io.h"
+#include "pos_ctrl.h"
+#include "task_pos_cmd_handler.h"
+
 /*Other include*/
 
 /*Config file include*/
@@ -33,7 +36,7 @@
 /*Constant*/
 
 /*Static variable*/
-static DMOTC_HANDLE_T dmotch;               /**< @brief  Handle of dual_motor_controller./
+static DMOTC_HANDLE_T dmotch;               /**< @brief  Handle of dual_motor_controller.*/
 
 /*PID related*/
 static PID_HANDLE_T pospid;                 /**< @brief  Handle of position PID.*/        
@@ -77,7 +80,7 @@ static POSC_CMD_HANDLE_T pccmdh = DFLT_INIT_POSC_CMD_HANDLE_T(); /**< @brief  Po
 /**
  * @brief  Configuration handle of position PID.
  */
-static POSC_CFG_HANDLE_T pccfgh = INIT_POSC_CFG_HANDLE_T(POSC_ON_THOLD_DEG, DMOTC_DFLT_POS_S_MIN, DMOTC_DFLT_POS_S_MAX, DMOTC_DFLT_P_KP);
+static POSC_CFG_HANDLE_T pccfgh = INIT_POSC_CFG_HANDLE_T(POSC_ON_THOLD_U16, DMOTC_DFLT_POS_S_MIN, DMOTC_DFLT_POS_S_MAX, DMOTC_DFLT_POS_KP);
 
 /*Contorl related signal*/
 static bool dmotc_is_good = true;                     /**< @brief  Flag task is good.*/
@@ -92,7 +95,7 @@ static float s_axis_max_abs = DMOTC_DFLT_S_AXIS_MAX_ABS_RPM;  /**< @brief  Maxim
 static float tq_mot_pc[2] = {0.0f, 0.0f};     /**< @brief  DA signal in percentage.*/
 static float tq_mot_v[2] = {0.0f, 0.0f};      /**< @brief  DA signal in voltage.*/
 static float speed_act_rpm = 0.0f;            /**< @brief  Axis actual speed in RPM.*/
-static long speed_act_lsb = 0;                /**< @brief  Axis actual speed in raw format.*/
+//static long speed_act_lsb = 0;                /**< @brief  Axis actual speed in raw format.*/
 
 static float pos_act_deg = 0.0f;              /**< @brief  Axis actual position in degree.*/
 
@@ -101,7 +104,7 @@ static float pos_cmd_deg = 0.0f;              /**< @brief  Axis position command
 
 /*Declare private functions*/
 static float _GetPosDEG(void);
-static long _GetSpeedLSB(void);
+//static long _GetSpeedLSB(void);
 
 /*Thread*/
 static thread_t *tp_dmotc;
@@ -113,7 +116,7 @@ static THD_FUNCTION(procDMOTC ,p)
 
   float _priv_speeed_cmd_rpm = 0.0f;
   float _priv_pos_cmd = 0.0f;
-  float _priv_speed_cmd_raw_rpm = 0.0f;
+  //float _priv_speed_cmd_raw_rpm = 0.0f;
 
   //POSC_CMD_HANDLE_T _priv_pccmdh = DFLT_INIT_POSC_CMD_HANDLE_T();
 
@@ -166,7 +169,7 @@ static THD_FUNCTION(procDMOTC ,p)
         /*Reset privite variable*/
         _priv_speeed_cmd_rpm  = 0.0f;
         _priv_pos_cmd = 0.0f;
-        _priv_speed_cmd_raw_rpm = 0.0f;
+        //_priv_speed_cmd_raw_rpm = 0.0f;
 
         /*Reset input and output*/
         tdmotc_ResetIO();
@@ -252,7 +255,7 @@ static THD_FUNCTION(procDMOTC ,p)
         //_priv_pos_cmd = tdmotc_GetPosCmd();
         pos_act_deg = _GetPosDEG();
 
-        _priv_speeed_cmd_rpm = POSC_Run(&ppcmdh, &pccfgh, POSC_ConvertDeg2U16(pos_act_deg));
+        _priv_speeed_cmd_rpm = POSC_Run(&pccmdh, &pccfgh, POSC_ConvertDeg2U16(pos_act_deg));
       }
       else if(TDMOTC_MODE_P2 == mode)
       {
@@ -322,13 +325,13 @@ static float _GetPosDEG(void)
   return output;
 }
 
-static long _GetSpeedLSB(void)
-{
-  long output = 0;
-  /*Implement get method and conversion here*/
-  output = modbus_master_GetSpeed();
-  return output;
-}
+//static long _GetSpeedLSB(void)
+//{
+//  long output = 0;
+//  /*Implement get method and conversion here*/
+//  output = modbus_master_GetSpeed();
+//  return output;
+//}
 
 /*Functions*/
 void tdmotc_algorithm_task_init(void)
@@ -860,7 +863,7 @@ float tdmotc_GetPCCFG(uint8_t index)
     break;
     
     case TDMOTC_PCCFG_ID_KP:
-    retval = POSC_GetCfKp(&pccfgh);
+    retval = POSC_GetCfgKp(&pccfgh);
     break;
 
     default:
