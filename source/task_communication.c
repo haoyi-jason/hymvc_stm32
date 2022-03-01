@@ -351,7 +351,7 @@ static THD_FUNCTION(procCANRx,p){
 
 void task_communication_init(void)
 {
-  analog_input_task_init();
+  //analog_input_task_init();
   analog_output_task_init();
   resolver_task_init();
   modbus_master_task_init();

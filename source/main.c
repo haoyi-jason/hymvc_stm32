@@ -4,21 +4,23 @@
 #include "task_dac.h"
 #include "task_resolver.h"
 #include "task_communication.h"
+#include "task_pos_cmd_handler.h"
 #include "task_dual_motor_ctrl.h"
-#include "task_mbmaster.h"
+//#include "task_mbmaster.h"
 #include "task_dac.h"
 
 //static long speed = 0;
 //static long pos = 0;
 static long counter = 0;
-static float output_sequence[4] = {-1.5f, 0.0f, 1.5f, 0.0f};
+// static float output_sequence[4] = {-1.5f, 0.0f, 1.5f, 0.0f};
 
 //static uint8_t sequence_index = 0;
 
 int main(void)
 {
   halInit();
-  chSysInit();;
+  chSysInit();
+  tpcmdh_taskInit();
   task_communication_init();
   tdmotc_algorithm_task_init();
 

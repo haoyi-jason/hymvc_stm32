@@ -64,6 +64,7 @@ typedef struct
 
 /*Functions*/
 pos_u16t POSC_CalcPerr(bool dir, pos_u16t cmd, pos_u16t act);
+bool POSC_CalcDirection(bool dir_curr, pos_u16t cmd, pos_u16t act, pos_u16t thold);
 float POSC_Run(POSC_CMD_HANDLE_T *ppcmdh, POSC_CFG_HANDLE_T *ppccfgh, pos_u16t act);
 
 /*Helper functions*/

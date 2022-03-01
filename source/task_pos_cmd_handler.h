@@ -14,9 +14,9 @@ extern "C" {
 /*Other include*/
 
 /*Functions*/
-void tpcmdh_bsemInit();
-void tpcmdh_taskInit();
-bool tpcmdh_CalcDirection(bool dir_curr, pos_u16t cmd, pos_u16t act, pos_u16t thold);
+void tpcmdh_bsemInit(void);
+void tpcmdh_taskInit(void);
+//bool tpcmdh_CalcDirection(bool dir_curr, pos_u16t cmd, pos_u16t act, pos_u16t thold);
 
 /*Set and get functions*/
 void tpcmdh_SetPosCmd(float val);

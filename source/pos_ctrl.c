@@ -25,6 +25,16 @@ pos_u16t POSC_CalcPerr(bool dir, pos_u16t cmd, pos_u16t act)
   return retval;
 }
 
+bool POSC_CalcDirection(bool dir_curr, pos_u16t cmd, pos_u16t act, pos_u16t thold)
+{
+  if(POSC_CalcPerr(dir_curr, cmd, act) > thold)
+  {
+    dir_curr = !dir_curr;
+  }
+
+  return dir_curr;
+}
+
 float POSC_Run(POSC_CMD_HANDLE_T *ppccmdh, POSC_CFG_HANDLE_T *ppccfgh, pos_u16t act)
 {
   /*Declare private variables*/
@@ -42,7 +52,7 @@ float POSC_Run(POSC_CMD_HANDLE_T *ppccmdh, POSC_CFG_HANDLE_T *ppccfgh, pos_u16t 
     //memcpy(&_priv_pccmdh, ppccmdh, sizeof(POSC_CMD_HANDLE_T));
     //chSysUnlock();
 
-    _priv_perr = POSC_CalcPerr(ppccmdh->direction_cmd, ppccmdh->pos_cmd_u16, act);
+    ppccmdh->direction_cmd = POSC_CalcDirection(ppccmdh->direction_cmd, ppccmdh->pos_cmd_u16, act, POSC_POSU16_180DEG);
 
     if(_priv_perr >= ppccfgh->pos_err_thold_u16)
     {

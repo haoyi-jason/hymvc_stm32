@@ -116,6 +116,7 @@ static THD_FUNCTION(procDMOTC ,p)
 
   float _priv_speeed_cmd_rpm = 0.0f;
   float _priv_pos_cmd = 0.0f;
+  static pos_u16t _priv_pos_act_u16;
   //float _priv_speed_cmd_raw_rpm = 0.0f;
 
   //POSC_CMD_HANDLE_T _priv_pccmdh = DFLT_INIT_POSC_CMD_HANDLE_T();
@@ -155,6 +156,9 @@ static THD_FUNCTION(procDMOTC ,p)
 
   while(!chThdShouldTerminateX())
   {
+    /*Timing*/
+    palSetPad(GPIOI, GPIOI_PIN6);
+
     /*Run periodically*/
     /*State contol*/
     if(start && dmotc_is_good )
@@ -254,8 +258,9 @@ static THD_FUNCTION(procDMOTC ,p)
         chSysUnlock();
         //_priv_pos_cmd = tdmotc_GetPosCmd();
         pos_act_deg = _GetPosDEG();
+        _priv_pos_act_u16 = POSC_ConvertDeg2U16(pos_act_deg);
 
-        _priv_speeed_cmd_rpm = POSC_Run(&pccmdh, &pccfgh, POSC_ConvertDeg2U16(pos_act_deg));
+        _priv_speeed_cmd_rpm = POSC_Run(&pccmdh, &pccfgh, _priv_pos_act_u16);
       }
       else if(TDMOTC_MODE_P2 == mode)
       {
@@ -311,6 +316,10 @@ static THD_FUNCTION(procDMOTC ,p)
       analog_output_set_voltage(PIN_MOT2_AIN, &tq_mot_v[1]);
     }
 
+    /*GPIO toggle*/
+    //chThdSleepMilliseconds(5);
+    palClearPad(GPIOI, GPIOI_PIN6);
+    
     /*Sleep*/
     prev = chThdSleepUntilWindowed(prev, chTimeAddX(prev, TIME_MS2I(10)));
   }

@@ -53,17 +53,17 @@ static THD_FUNCTION(procPCMDH ,p)
       if(_priv_speed_act > 0.005f)
       {
         /*Rotate in positive direction*/
-        _privpccmdh.direction_cmd = tpcmdh_CalcDirection(true, _privpccmdh.pos_cmd_u16, _priv_pos_act_u16, POSC_ALT_DIR_THOLD_U16);
+        _privpccmdh.direction_cmd = POSC_CalcDirection(true, _privpccmdh.pos_cmd_u16, _priv_pos_act_u16, POSC_POSU16_180DEG);
       }
       else if(_priv_speed_act < -0.005f)
       {
         /*Rotate in negative direction*/
-        _privpccmdh.direction_cmd = tpcmdh_CalcDirection(false, _privpccmdh.pos_cmd_u16, _priv_pos_act_u16, POSC_ALT_DIR_THOLD_U16);
+        _privpccmdh.direction_cmd = POSC_CalcDirection(false, _privpccmdh.pos_cmd_u16, _priv_pos_act_u16, POSC_POSU16_180DEG);
       }
       else
       {
         /*Stop or very slow at the moment*/
-        _privpccmdh.direction_cmd = tpcmdh_CalcDirection(true, _privpccmdh.pos_cmd_u16, _priv_pos_act_u16, POSC_POSU16_180DEG);
+        _privpccmdh.direction_cmd = POSC_CalcDirection(true, _privpccmdh.pos_cmd_u16, _priv_pos_act_u16, POSC_POSU16_180DEG);
       }
 
       /*Write to runTime*/
@@ -76,12 +76,12 @@ static THD_FUNCTION(procPCMDH ,p)
   }
 }
 
-void tpcmdh_bsemInit()
+void tpcmdh_bsemInit(void)
 { 
   chBSemObjectInit(&runTime.pccmdh_bsem, true);
 }
 
-void tpcmdh_taskInit()
+void tpcmdh_taskInit(void)
 {
   /*Init runTime*/
   runTime.pos_cmd_user = 0.0f;
@@ -90,19 +90,22 @@ void tpcmdh_taskInit()
 
   pcmdhRuntime = &runTime;
 
+  /*Init Semaphore*/
+  tpcmdh_bsemInit();
+
   /*Start dedicated thread*/
   runTime.self = chThdCreateStatic(waPCMDH,sizeof(waPCMDH),NORMALPRIO,procPCMDH,NULL);
 }
 
-bool tpcmdh_CalcDirection(bool dir_curr, pos_u16t cmd, pos_u16t act, pos_u16t thold)
-{
-  if(POSC_CalcPerr(dir_curr, cmd, act) > thold)
-  {
-    dir_curr != dir_curr;
-  }
-
-  return dir_curr;
-}
+//bool tpcmdh_CalcDirection(bool dir_curr, pos_u16t cmd, pos_u16t act, pos_u16t thold)
+//{
+//  if(POSC_CalcPerr(dir_curr, cmd, act) > thold)
+//  {
+//    dir_curr = !dir_curr;
+//  }
+//
+//  return dir_curr;
+//}
 
 
 /*Set and get functions*/
