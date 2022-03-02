@@ -38,7 +38,7 @@ extern "C" {
 #define DMOTC_DFLT_ZCP                80.0f
 
 /*Position mode config*/
-#define DMOTC_DFLT_POS_S_MIN          1.0f
+#define DMOTC_DFLT_POS_S_MIN          0.5f
 #define DMOTC_DFLT_POS_S_MAX          3.0f
 #define DMOTC_DFLT_POS_KP             0.2f /*Range: 0.01 ~ 1.0*/
 

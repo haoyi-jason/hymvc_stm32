@@ -71,7 +71,6 @@ void tdmotc_ResetFault(void);
 void tdmotc_SetSpeedCmd(float val);
 float tdmotc_GetSpeedCmd(void);
 
-void tdmotc_SetPosCmd(float val);
 void tdmotc_SetPosCmd2(float val);
 float tdmotc_GetPosCmd(void);
 

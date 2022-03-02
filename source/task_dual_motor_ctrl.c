@@ -117,9 +117,7 @@ static THD_FUNCTION(procDMOTC ,p)
   float _priv_speeed_cmd_rpm = 0.0f;
   float _priv_pos_cmd = 0.0f;
   static pos_u16t _priv_pos_act_u16;
-  //float _priv_speed_cmd_raw_rpm = 0.0f;
 
-  //POSC_CMD_HANDLE_T _priv_pccmdh = DFLT_INIT_POSC_CMD_HANDLE_T();
 
   /*Initialization*/
 
@@ -173,7 +171,6 @@ static THD_FUNCTION(procDMOTC ,p)
         /*Reset privite variable*/
         _priv_speeed_cmd_rpm  = 0.0f;
         _priv_pos_cmd = 0.0f;
-        //_priv_speed_cmd_raw_rpm = 0.0f;
 
         /*Reset input and output*/
         tdmotc_ResetIO();
@@ -205,10 +202,7 @@ static THD_FUNCTION(procDMOTC ,p)
         digital_set_iso_out(5,1);
         digital_set_iso_out(6,1);
         digital_set_iso_out(7,1);
-//        modbus_master_WriteCtrl(1, 3);
-//        chThdSleepMilliseconds(500);
-//        modbus_master_WriteCtrl(2, 3);
-//        chThdSleepMilliseconds(500);
+
         start_last = start;
        // start = false;
       }
@@ -223,6 +217,8 @@ static THD_FUNCTION(procDMOTC ,p)
         DMOTC_Stop(&dmotch);
 
         /*Reset input and output*/
+        tdmotc_SetSpeedCmd(0.0f);
+        tpcmdh_SetPosCmd(0.0f);
         tdmotc_ResetIO();
         analog_output_set_voltage(PIN_MOT1_AIN, &tq_mot_v[0]);
         analog_output_set_voltage(PIN_MOT2_AIN, &tq_mot_v[1]);
@@ -232,10 +228,6 @@ static THD_FUNCTION(procDMOTC ,p)
         digital_set_iso_out(5,0);
         digital_set_iso_out(6,0);
         digital_set_iso_out(7,0);
-//        modbus_master_WriteCtrl(1, 0);
-//        chThdSleepMilliseconds(500);
-//        modbus_master_WriteCtrl(2, 0);
-//        chThdSleepMilliseconds(500);
 
         start_last = false;
       }
@@ -394,9 +386,6 @@ void tdmotc_Stop(void)
  */
 void tdmotc_ResetIO(void)
 {
-  tdmotc_SetSpeedCmd(0.0f);
-  tdmotc_SetPosCmd(0.0f);
-
   for (int i = 0; i < 2; i++)
   {
     tq_mot_pc[i] = 0.0f;
@@ -445,24 +434,24 @@ float tdmotc_GetSpeedCmd(void)
   return speed_cmd_rpm;
 }
 
-void tdmotc_SetPosCmd(float val)
-{
-  if(isfinite(val))
-  {
-    if(val > 345.0f)
-    {
-      pos_cmd_deg = 345.0f;
-    }
-    else if(val < 15.0f)
-    {
-      pos_cmd_deg = 15.0f;
-    }
-    else
-    {
-      pos_cmd_deg = val;
-    }
-  }
-}
+//void tdmotc_SetPosCmd(float val)
+//{
+//  if(isfinite(val))
+//  {
+//    if(val > 345.0f)
+//    {
+//      pos_cmd_deg = 345.0f;
+//    }
+//    else if(val < 15.0f)
+//    {
+//      pos_cmd_deg = 15.0f;
+//    }
+//    else
+//    {
+//      pos_cmd_deg = val;
+//    }
+//  }
+//}
 
 void tdmotc_SetPosCmd2(float val)
 {

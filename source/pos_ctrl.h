@@ -29,8 +29,8 @@ typedef uint16_t pos_u16t;    /**<  @brief  Position type in u16. Range from 0 -
 #define   POSC_DEG_MAX        359.999f
 #define   POSC_DEG_MIN        0.0f
 #define   POSC_POSU16_MAX     UINT16_MAX
-#define   POSC_ON_THOLD_DEG   0.5f
-#define   POSC_ON_THOLD_U16   91U
+#define   POSC_ON_THOLD_DEG   2.0f
+#define   POSC_ON_THOLD_U16   364U
 #define   POSC_PREGAIN_1      0.001f
 
 #define   POSC_ALT_DIR_THOLD_U16  ((pos_u16t)36408) /*200.0 deg*/
