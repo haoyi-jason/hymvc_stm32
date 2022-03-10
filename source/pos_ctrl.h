@@ -7,7 +7,7 @@
  * @{
  *
  * @details    { detailed_item_description }
- * @version    0.0.1
+ * @version    1.0.1
  */
 
 #ifndef POS_CTRL_H

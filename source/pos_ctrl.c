@@ -54,6 +54,9 @@ float POSC_Run(POSC_CMD_HANDLE_T *ppccmdh, POSC_CFG_HANDLE_T *ppccfgh, pos_u16t 
 
     ppccmdh->direction_cmd = POSC_CalcDirection(ppccmdh->direction_cmd, ppccmdh->pos_cmd_u16, act, POSC_POSU16_180DEG);
 
+    _priv_perr = POSC_CalcPerr(ppccmdh->direction_cmd, ppccmdh->pos_cmd_u16, act);
+
+
     if(_priv_perr >= ppccfgh->pos_err_thold_u16)
     {
       retval = ((float)_priv_perr * POSC_PREGAIN_1 * (ppccfgh->kp)) + ppccfgh->s_cmd_min;
