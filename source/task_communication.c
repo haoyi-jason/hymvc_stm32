@@ -10,6 +10,7 @@
 #include "task_mbmaster.h"
 #include "digital_io.h"
 #include "task_dual_motor_ctrl.h"
+#include "task_pos_cmd_handler.h"
 
 int8_t config_handler(CANRxFrame *prx,CANTxFrame *ptx);
 int8_t id_handler(CANRxFrame *prx,CANTxFrame *ptx);
@@ -135,7 +136,7 @@ static int16_t pid_get_cmd_value(uint8_t mode, uint8_t cmd_index)
 //static int32_t pid_get_para_value(uint8_t cmd_index)
 static float pid_get_para_value(uint8_t cmd_index)
 {
-  int32_t output = 0.0f;
+  //int32_t output = 0.0f;
   float output_f = 0.0f;
   switch (cmd_index)
   {
@@ -490,8 +491,8 @@ int8_t pid_command(CANRxFrame *prx,CANTxFrame *ptx)
     uint8_t flag = prx->data8[0] & 0x03;
     uint8_t clr_fault = (prx->data8[0] >>2) & 0x01;
     uint8_t mode = (prx->data8[0] >> 4);
-    uint8_t cmd_index = prx->data8[1];
-    int16_t cmd_value = prx->data16[1];
+    //uint8_t cmd_index = prx->data8[1];
+    uint16_t cmd_value = prx->data16[1];
 
     
     if(clr_fault)
@@ -570,7 +571,7 @@ int8_t pid_parameter(CANRxFrame *prx,CANTxFrame *ptx)
     }
     else{
       uint8_t cmd_index = prx->data8[0];
-      int32_t cmd_value;
+      //int32_t cmd_value;
       // take care of byte order
   //    memcpy((void*)&cmd_value,&prx->data8[1],4);
       float cmd_value_f;// = tdmotc_ConvCAN2Sig(cmd_value);

@@ -114,7 +114,7 @@ static THD_FUNCTION(procDMOTC ,p)
   /*Declare local variable*/
   systime_t prev = chVTGetSystemTime(); /* Current system time.*/
 
-  float _priv_speeed_cmd_rpm = 0.0f;
+  static float _priv_speeed_cmd_rpm = 0.0f;
   float _priv_pos_cmd = 0.0f;
   static pos_u16t _priv_pos_act_u16;
 
