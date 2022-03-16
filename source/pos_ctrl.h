@@ -7,7 +7,7 @@
  * @{
  *
  * @details    { detailed_item_description }
- * @version    1.0.1
+ * @version    1.0.2
  */
 
 #ifndef POS_CTRL_H
@@ -35,6 +35,8 @@ typedef uint16_t pos_u16t;    /**<  @brief  Position type in u16. Range from 0 -
 
 #define   POSC_ALT_DIR_THOLD_U16  ((pos_u16t)36408) /*200.0 deg*/
 #define   POSC_POSU16_180DEG      ((pos_u16t)32767) 
+#define   POSC_POSU16_45DEG       ((pos_u16t)8191) 
+#define   POSC_POSU16_315DEG      ((pos_u16t)57343) 
 
 
 typedef struct

@@ -47,15 +47,14 @@ float POSC_Run(POSC_CMD_HANDLE_T *ppccmdh, POSC_CFG_HANDLE_T *ppccfgh, pos_u16t 
   if((NULL != ppccmdh) && (NULL != ppccfgh))
   {
     /*Proceed*/
-    /*Copy data*/
-    //chSysLock();
-    //memcpy(&_priv_pccmdh, ppccmdh, sizeof(POSC_CMD_HANDLE_T));
-    //chSysUnlock();
-
-    ppccmdh->direction_cmd = POSC_CalcDirection(ppccmdh->direction_cmd, ppccmdh->pos_cmd_u16, act, POSC_POSU16_180DEG);
-
     _priv_perr = POSC_CalcPerr(ppccmdh->direction_cmd, ppccmdh->pos_cmd_u16, act);
 
+    /*Run direction calculator to handle possible overshoot if _priv_perr is within range.*/
+    if((_priv_perr < POSC_POSU16_45DEG) || (_priv_perr > POSC_POSU16_315DEG))
+    {
+      ppccmdh->direction_cmd = POSC_CalcDirection(ppccmdh->direction_cmd, ppccmdh->pos_cmd_u16, act, POSC_POSU16_180DEG);
+      _priv_perr = POSC_CalcPerr(ppccmdh->direction_cmd, ppccmdh->pos_cmd_u16, act);
+    }
 
     if(_priv_perr >= ppccfgh->pos_err_thold_u16)
     {

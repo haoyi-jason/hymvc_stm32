@@ -53,12 +53,12 @@ static THD_FUNCTION(procPCMDH ,p)
       if(_priv_speed_act > 0.005f)
       {
         /*Rotate in positive direction*/
-        _privpccmdh.direction_cmd = POSC_CalcDirection(true, _privpccmdh.pos_cmd_u16, _priv_pos_act_u16, POSC_POSU16_180DEG);
+        _privpccmdh.direction_cmd = POSC_CalcDirection(true, _privpccmdh.pos_cmd_u16, _priv_pos_act_u16, POSC_ALT_DIR_THOLD_U16);
       }
       else if(_priv_speed_act < -0.005f)
       {
         /*Rotate in negative direction*/
-        _privpccmdh.direction_cmd = POSC_CalcDirection(false, _privpccmdh.pos_cmd_u16, _priv_pos_act_u16, POSC_POSU16_180DEG);
+        _privpccmdh.direction_cmd = POSC_CalcDirection(false, _privpccmdh.pos_cmd_u16, _priv_pos_act_u16, POSC_ALT_DIR_THOLD_U16);
       }
       else
       {
