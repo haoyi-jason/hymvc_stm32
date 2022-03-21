@@ -6,11 +6,10 @@
  * @addtogroup DUAL_MOTOR_CTRL_CONFIG dual motor control configuration
  * @{
  *
- * @details    
- * @version    { version_number }
  */
 #ifndef DUAL_MOTOR_CTRL_CONFIG_H
 #define DUAL_MOTOR_CTRL_CONFIG_H
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -18,33 +17,34 @@ extern "C" {
 /*Parameters*/
 
 /*Default valus*/
-/*Hardware config*/
+/*Hardware related parameters*/
 #define DMOTC_DFLT_TQ_MOT_MAX_ABS_PC  99.9f
 #define DMOTC_DFLT_S_AXIS_MAX_ABS_RPM 5.0f
 
-/*PID config*/  
-#define DMOTC_DFLT_P_PID_KP           0.5f
-#define DMOTC_DFLT_P_PID_KI           0.0f
-#define DMOTC_DFLT_P_PID_KD           0.0f
+/*PID related parameters*/  
+#define DMOTC_DFLT_P_PID_KP           0.5f  /*Currently not in used.*/
+#define DMOTC_DFLT_P_PID_KI           0.0f  /*Currently not in used.*/
+#define DMOTC_DFLT_P_PID_KD           0.0f  /*Currently not in used.*/
 
 #define DMOTC_DFLT_S_PID_KP           1.0f
 #define DMOTC_DFLT_S_PID_KI           0.025f
 #define DMOTC_DFLT_S_PID_KD           0.0f
 
-/*TQBC config*/
+/*TQBC related parameters*/
 #define DMOTC_DFLT_OUT_MAX            10.0f
 #define DMOTC_DFLT_OUT_MIN            0.0f
 #define DMOTC_DFLT_GAIN               -0.3f
 #define DMOTC_DFLT_ZCP                80.0f
 
-/*Position mode config*/
+/*Position mode related parameters*/
 #define DMOTC_DFLT_POS_S_MIN          0.5f
 #define DMOTC_DFLT_POS_S_MAX          3.0f
-#define DMOTC_DFLT_POS_KP             0.2f /*Range: 0.01 ~ 1.0*/
+#define DMOTC_DFLT_POS_KP             0.2f
 
-/*Position 2 mode config*/
+/*Position 2 mode related parameters*/
 #define DMOTC_DFLT_POS2_THOLD         1.0f
 #define DMOTC_DFLT_SPEED              2.0f
+
 #ifdef __cplusplus
 }
 #endif

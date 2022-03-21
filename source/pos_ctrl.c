@@ -1,3 +1,8 @@
+/**
+ * @file       pos_ctrl.c
+ * @addtogroup POS_CTRL
+ * @{
+ */
 /*Standard include*/
 #include <stdbool.h>
 #include <string.h>
@@ -9,6 +14,15 @@
 /*Module include*/
 #include "saturation.h"
 
+/**
+ * @brief      This function will calculate position error.
+ *
+ * @param[in]  dir   Direction
+ * @param[in]  cmd   Command position value
+ * @param[in]  act   Actual position value
+ *
+ * @return     Position error
+ */
 pos_u16t POSC_CalcPerr(bool dir, pos_u16t cmd, pos_u16t act)
 {
   pos_u16t retval;
@@ -25,6 +39,16 @@ pos_u16t POSC_CalcPerr(bool dir, pos_u16t cmd, pos_u16t act)
   return retval;
 }
 
+/**
+ * @brief      This function will calculate target direction.
+ *
+ * @param[in]  dir_curr  Current target direction.
+ * @param[in]  cmd       Command position value
+ * @param[in]  act       Actual position value
+ * @param[in]  thold     Threshold for target direction changed.
+ *
+ * @return     New terget direction
+ */
 bool POSC_CalcDirection(bool dir_curr, pos_u16t cmd, pos_u16t act, pos_u16t thold)
 {
   if(POSC_CalcPerr(dir_curr, cmd, act) > thold)
@@ -35,6 +59,15 @@ bool POSC_CalcDirection(bool dir_curr, pos_u16t cmd, pos_u16t act, pos_u16t thol
   return dir_curr;
 }
 
+/**
+ * @brief      Run position controller once.
+ *
+ * @param      ppccmdh  Pointer to POSC_CMD_HANDLE_T
+ * @param      ppccfgh  Pointer to POSC_CFG_HANDLE_T
+ * @param[in]  act      Actual position value
+ *
+ * @return     Platform target speed in rpm.
+ */
 float POSC_Run(POSC_CMD_HANDLE_T *ppccmdh, POSC_CFG_HANDLE_T *ppccfgh, pos_u16t act)
 {
   /*Declare private variables*/
@@ -75,6 +108,13 @@ float POSC_Run(POSC_CMD_HANDLE_T *ppccmdh, POSC_CFG_HANDLE_T *ppccfgh, pos_u16t 
 }
 
 /*Helper functions*/
+/**
+ * @brief      This function convert angle form degree to pos_u16t.
+ *
+ * @param[in]  degree  Angle in degree
+ *
+ * @return     Angle in pos_u16t format
+ */
 pos_u16t POSC_ConvertDeg2U16(float degree)
 {
   pos_u16t retval = 0;
@@ -87,6 +127,13 @@ pos_u16t POSC_ConvertDeg2U16(float degree)
   return retval;
 }
 
+/**
+ * @brief      This function convert angle form pos_u16t to degree.
+ *
+ * @param[in]  degree_u16  Angle in pos_u16t format
+ *
+ * @return     Angle in degree
+ */
 float POSC_ConvertU162Deg(pos_u16t degree_u16)
 {
   float retval = 0.0f;
@@ -97,6 +144,12 @@ float POSC_ConvertU162Deg(pos_u16t degree_u16)
 }
 
 /*Set and get functions*/
+/**
+ * @brief      This function set @p pos_err_thold_u16 within @p POSC_CFG_HANDLE_T
+ *
+ * @param      ppccfgh  Pointer to @p POSC_CFG_HANDLE_T
+ * @param[in]  val      Value to be set
+ */
 void POSC_SetCfgPErrThold(POSC_CFG_HANDLE_T *ppccfgh, float val)
 {
   if((NULL != ppccfgh) && isfinite(val))
@@ -106,6 +159,13 @@ void POSC_SetCfgPErrThold(POSC_CFG_HANDLE_T *ppccfgh, float val)
   }  
 }
 
+/**
+ * @brief      This function get @p pos_err_thold_u16 within @p POSC_CFG_HANDLE_T
+ *
+ * @param      ppccfgh  Pointer to @p POSC_CFG_HANDLE_T
+ *
+ * @return     Current setup value
+ */
 float POSC_GetCfgPErrThold(POSC_CFG_HANDLE_T *ppccfgh)
 {
   float retval = 0.0f;
@@ -117,7 +177,12 @@ float POSC_GetCfgPErrThold(POSC_CFG_HANDLE_T *ppccfgh)
   return retval;
 }
 
-
+/**
+ * @brief      This function set @p s_cmd_min within @p POSC_CFG_HANDLE_T
+ *
+ * @param      ppccfgh  Pointer to @p POSC_CFG_HANDLE_T
+ * @param[in]  val      Value to be set
+ */
 void POSC_SetCfgSCmdMin(POSC_CFG_HANDLE_T *ppccfgh, float val)
 {
   if(NULL != ppccfgh && isfinite(val))
@@ -127,6 +192,13 @@ void POSC_SetCfgSCmdMin(POSC_CFG_HANDLE_T *ppccfgh, float val)
   
 }
 
+/**
+ * @brief      This function get @p s_cmd_min within @p POSC_CFG_HANDLE_T
+ *
+ * @param      ppccfgh  Pointer to @p POSC_CFG_HANDLE_T
+ *
+ * @return     Current setup value
+ */
 float POSC_GetCfgSCmdMin(POSC_CFG_HANDLE_T *ppccfgh)
 {
   float retval = 0.0f;
@@ -138,6 +210,12 @@ float POSC_GetCfgSCmdMin(POSC_CFG_HANDLE_T *ppccfgh)
   return retval;
 }
 
+/**
+ * @brief      This function set @p s_cmd_max within @p POSC_CFG_HANDLE_T
+ *
+ * @param      ppccfgh  Pointer to @p POSC_CFG_HANDLE_T
+ * @param[in]  val      Value to be set
+ */
 void POSC_SetCfgSCmdMax(POSC_CFG_HANDLE_T *ppccfgh, float val)
 {
   if(NULL != ppccfgh && isfinite(val))
@@ -147,6 +225,13 @@ void POSC_SetCfgSCmdMax(POSC_CFG_HANDLE_T *ppccfgh, float val)
   
 }
 
+/**
+ * @brief      This function get @p s_cmd_max within @p POSC_CFG_HANDLE_T
+ *
+ * @param      ppccfgh  Pointer to @p POSC_CFG_HANDLE_T
+ *
+ * @return     Current setup value
+ */
 float POSC_GetCfgSCmdMax(POSC_CFG_HANDLE_T *ppccfgh)
 {
   float retval = 0.0f;
@@ -158,6 +243,12 @@ float POSC_GetCfgSCmdMax(POSC_CFG_HANDLE_T *ppccfgh)
   return retval;
 }
 
+/**
+ * @brief      This function set @p kp within @p POSC_CFG_HANDLE_T
+ *
+ * @param      ppccfgh  Pointer to @p POSC_CFG_HANDLE_T
+ * @param[in]  val      Value to be set
+ */
 void POSC_SetCfgKp(POSC_CFG_HANDLE_T *ppccfgh, float val)
 {
   if(NULL != ppccfgh && isfinite(val))
@@ -167,6 +258,13 @@ void POSC_SetCfgKp(POSC_CFG_HANDLE_T *ppccfgh, float val)
   
 }
 
+/**
+ * @brief      This function get @p kp within @p POSC_CFG_HANDLE_T
+ *
+ * @param      ppccfgh  Pointer to @p POSC_CFG_HANDLE_T
+ *
+ * @return     Current setup value
+ */
 float POSC_GetCfgKp(POSC_CFG_HANDLE_T *ppccfgh)
 {
   float retval = 0.0f;
@@ -177,3 +275,7 @@ float POSC_GetCfgKp(POSC_CFG_HANDLE_T *ppccfgh)
   }
   return retval;
 }
+
+/**
+ * @}
+ */

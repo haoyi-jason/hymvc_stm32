@@ -46,10 +46,10 @@ typedef uint8_t   tdmotc_msg_t;
 #define TDMOTC_TQBC_ID_ZCP       3U                      /**< @brief  Index of zero crossing point.*/
 
 /*Define Position controller*/
-#define TDMOTC_PCCFG_ID_PERR_THOLD  0U
-#define TDMOTC_PCCFG_ID_S_CMD_MIN   1U
-#define TDMOTC_PCCFG_ID_S_CMD_MAX   2U
-#define TDMOTC_PCCFG_ID_KP          3U
+#define TDMOTC_PCCFG_ID_PERR_THOLD  0U                   /**< @brief  Index of threshold of position controller.*/
+#define TDMOTC_PCCFG_ID_S_CMD_MIN   1U                   /**< @brief  Index of Minimum output speed of position controller.*/
+#define TDMOTC_PCCFG_ID_S_CMD_MAX   2U                   /**< @brief  Index of Maximum output speed of position controller.*/
+#define TDMOTC_PCCFG_ID_KP          3U                   /**< @brief  Index of Kp of position controller.*/
 
 /*Define signal gain*/
 #define TDMOTC_CAN2SIG_GAIN_F    (1.0f/10000.0f)         /**< @brief  Conversion gain from can format (int32_t) to float.*/

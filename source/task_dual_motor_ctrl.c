@@ -43,6 +43,7 @@ static PID_HANDLE_T pospid;                 /**< @brief  Handle of position PID.
 
 /**
  * @brief  Configuration handle of position PID.
+ * @note   Not in used any more. Can be deleted in version afterward.
  */
 static PID_CFG_T pidcfg_pos =
 {
@@ -78,7 +79,7 @@ static float zcp_set = DMOTC_DFLT_ZCP;                /**< @brief  Zero crossing
 /*Position control related*/
 static POSC_CMD_HANDLE_T pccmdh = DFLT_INIT_POSC_CMD_HANDLE_T(); /**< @brief  Position controller data handle.*/
 /**
- * @brief  Configuration handle of position PID.
+ * @brief  Configuration handle of position controller.
  */
 static POSC_CFG_HANDLE_T pccfgh = INIT_POSC_CFG_HANDLE_T(POSC_ON_THOLD_U16, DMOTC_DFLT_POS_S_MIN, DMOTC_DFLT_POS_S_MAX, DMOTC_DFLT_POS_KP);
 
@@ -243,15 +244,17 @@ static THD_FUNCTION(procDMOTC ,p)
       /*Control mode set*/
       if(TDMOTC_MODE_P == mode)
       {
-        /*Get input*/
+        /*Get command values*/
         chSysLock();
         pccmdh.pos_cmd_u16 = tpcmdh_GetPosCmdU16();
         pccmdh.direction_cmd = tpcmdh_GetDirection();
         chSysUnlock();
-        //_priv_pos_cmd = tdmotc_GetPosCmd();
+
+        /*Get actual value and convert*/
         pos_act_deg = _GetPosDEG();
         _priv_pos_act_u16 = POSC_ConvertDeg2U16(pos_act_deg);
 
+        /*Run position control algorithm*/
         _priv_speeed_cmd_rpm = POSC_Run(&pccmdh, &pccfgh, _priv_pos_act_u16);
       }
       else if(TDMOTC_MODE_P2 == mode)

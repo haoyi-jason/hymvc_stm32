@@ -1,3 +1,13 @@
+/**
+ * @file       task_pos_cmd_handler.h
+ * @author     Maxie
+ * @brief      This module contains thread of postion command processer and its APIs.
+ *
+ * @addtogroup TASK_POS_CMD_HANDLER Position command processer.
+ * @{
+ *
+ * @version    1.0.0
+ */
 #ifndef TASK_PCMDH_H
 #define TASK_PCMDH_H
 #ifdef __cplusplus
@@ -16,7 +26,6 @@ extern "C" {
 /*Functions*/
 void tpcmdh_bsemInit(void);
 void tpcmdh_taskInit(void);
-//bool tpcmdh_CalcDirection(bool dir_curr, pos_u16t cmd, pos_u16t act, pos_u16t thold);
 
 /*Set and get functions*/
 void tpcmdh_SetPosCmd(float val);
@@ -28,3 +37,7 @@ bool tpcmdh_GetDirection(void);
 }
 #endif
 #endif
+
+/**
+ * @}
+ */
