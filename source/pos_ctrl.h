@@ -3,11 +3,11 @@
  * @author     Maxie
  * @brief      This module includes position control related parameter and functions.
  *
- * @addtogroup POS_CTRL position control
+ * @addtogroup POS_CTRL position control algorithm.
  * @{
  *
- * @details    { detailed_item_description }
- * @version    0.0.1
+ * @details    This module contains position control algorithm alone with useful functions and APIs.
+ * @version    1.0.2
  */
 
 #ifndef POS_CTRL_H
@@ -25,34 +25,54 @@ extern "C" {
 /*Typedef*/
 typedef uint16_t pos_u16t;    /**<  @brief  Position type in u16. Range from 0 - 65535*/
 
-/*Parameter*/
+/**
+ * @name Parameters
+ * @{
+ */
 #define   POSC_DEG_MAX        359.999f
 #define   POSC_DEG_MIN        0.0f
 #define   POSC_POSU16_MAX     UINT16_MAX
 #define   POSC_ON_THOLD_DEG   2.0f
 #define   POSC_ON_THOLD_U16   364U
 #define   POSC_PREGAIN_1      0.001f
-
 #define   POSC_ALT_DIR_THOLD_U16  ((pos_u16t)36408) /*200.0 deg*/
+/** @} */
+
+/**
+ * @name Preset values
+ * @{
+ */
 #define   POSC_POSU16_180DEG      ((pos_u16t)32767) 
+#define   POSC_POSU16_45DEG       ((pos_u16t)8191) 
+#define   POSC_POSU16_315DEG      ((pos_u16t)57343) 
+/** @} */
 
-
+/*Structs*/
+/**
+ * @brief  Structure representing position command.
+ */
 typedef struct
 {
-  pos_u16t pos_cmd_u16;
-  bool direction_cmd;
+  pos_u16t pos_cmd_u16;  /**< @brief Target angle in pos_u16t format.*/
+  bool direction_cmd;    /**< @brief Target direction of rotation.*/
 } POSC_CMD_HANDLE_T;
 
-#define DFLT_INIT_POSC_CMD_HANDLE_T() {0U, true}
+#define DFLT_INIT_POSC_CMD_HANDLE_T() {0U, true} /**< @brief Macro function that initialize POSC_CMD_HANDLE_T.*/
 
+/**
+ * @brief  Structure representing position controller related parameters.
+ */
 typedef struct
 {
-  pos_u16t pos_err_thold_u16;
-  float s_cmd_min;
-  float s_cmd_max;
-  float kp;
+  pos_u16t pos_err_thold_u16;  /**< @brief  Threshold of position controller.*/
+  float s_cmd_min;             /**< @brief  Minimum output speed.*/
+  float s_cmd_max;             /**< @brief  Maximum output speed.*/
+  float kp;                    /**< @brief  Kp of position controller.*/
 } POSC_CFG_HANDLE_T;
 
+/**
+ * @brief  Macro function that initializ POSC_CFG_HANDLE_T, initial values required.
+ */
 #define INIT_POSC_CFG_HANDLE_T(thold, s_min, s_max, val_kp)\
 {\
   .pos_err_thold_u16 = thold,\

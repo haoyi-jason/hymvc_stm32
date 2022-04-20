@@ -1,3 +1,8 @@
+/**
+ * @file       task_pos_cmd_handler.c
+ * @addtogroup TASK_POS_CMD_HANDLER
+ * @{
+ */
 /*Standard include*/
 #include <stdint.h>
 #include <stdbool.h>
@@ -17,6 +22,9 @@
 
 /*Other include*/
 
+/**
+ * @brief      Structure of thread resources.
+ */
 struct runTime{
   thread_t *self;
   binary_semaphore_t pccmdh_bsem;
@@ -31,13 +39,8 @@ static THD_FUNCTION(procPCMDH ,p)
 {
   /*declare private variable*/
   POSC_CMD_HANDLE_T _privpccmdh = DFLT_INIT_POSC_CMD_HANDLE_T();
-  //pos_u16t _priv_pos_cmd_u16 = 0U;
-  //bool _priv_direction = true;
   pos_u16t _priv_pos_act_u16 = 0U;
   float _priv_speed_act = 0.0;
-
-
-
 
   /*Initialization*/
   while(!chThdShouldTerminateX())
@@ -53,12 +56,12 @@ static THD_FUNCTION(procPCMDH ,p)
       if(_priv_speed_act > 0.005f)
       {
         /*Rotate in positive direction*/
-        _privpccmdh.direction_cmd = POSC_CalcDirection(true, _privpccmdh.pos_cmd_u16, _priv_pos_act_u16, POSC_POSU16_180DEG);
+        _privpccmdh.direction_cmd = POSC_CalcDirection(true, _privpccmdh.pos_cmd_u16, _priv_pos_act_u16, POSC_ALT_DIR_THOLD_U16);
       }
       else if(_priv_speed_act < -0.005f)
       {
         /*Rotate in negative direction*/
-        _privpccmdh.direction_cmd = POSC_CalcDirection(false, _privpccmdh.pos_cmd_u16, _priv_pos_act_u16, POSC_POSU16_180DEG);
+        _privpccmdh.direction_cmd = POSC_CalcDirection(false, _privpccmdh.pos_cmd_u16, _priv_pos_act_u16, POSC_ALT_DIR_THOLD_U16);
       }
       else
       {
@@ -69,18 +72,26 @@ static THD_FUNCTION(procPCMDH ,p)
       /*Write to runTime*/
       chSysLock();
       memcpy(&runTime.pccmdh, &_privpccmdh, sizeof(POSC_CMD_HANDLE_T));
-      // runTime.pccmdh.pos_cmd_u16 = _privpccmdh.pos_cmd_u16;
-      // runTime.pccmdh.direction_cmd = _privpccmdh.direction_cmd;
       chSysUnlock();
     }
   }
 }
 
+/**
+ * @brief      This function initialize binary semaphore of postion command processer.
+ * 
+ * @note       This function is invoke by @p tpcmdh_taskInit() and don't need to be invoke seperately.
+ */
 void tpcmdh_bsemInit(void)
 { 
   chBSemObjectInit(&runTime.pccmdh_bsem, true);
 }
 
+/**
+ * @brief      This function initialize the thread for postion command processer.
+ * 
+ * @note       This function shold be invoke before commend producer thread initialization.
+ */
 void tpcmdh_taskInit(void)
 {
   /*Init runTime*/
@@ -97,18 +108,13 @@ void tpcmdh_taskInit(void)
   runTime.self = chThdCreateStatic(waPCMDH,sizeof(waPCMDH),NORMALPRIO,procPCMDH,NULL);
 }
 
-//bool tpcmdh_CalcDirection(bool dir_curr, pos_u16t cmd, pos_u16t act, pos_u16t thold)
-//{
-//  if(POSC_CalcPerr(dir_curr, cmd, act) > thold)
-//  {
-//    dir_curr = !dir_curr;
-//  }
-//
-//  return dir_curr;
-//}
-
 
 /*Set and get functions*/
+/**
+ * @brief      This function set position command and signal the binary semaphore.
+ *
+ * @param[in]  val   Position command to be set
+ */
 void tpcmdh_SetPosCmd(float val)
 {
   if(isfinite(val))
@@ -129,37 +135,36 @@ void tpcmdh_SetPosCmd(float val)
   chBSemSignal(&runTime.pccmdh_bsem);
 }
 
+/**
+ * @brief      This function get value of user set position command.
+ *
+ * @return     Current set value
+ */
 float tpcmdh_GetPosCmd(void)
 {
   return runTime.pos_cmd_user;
 }
 
+/**
+ * @brief      This function get value @p pos_cmd_u16 produced by position command processer.
+ *
+ * @return     Current set value
+ */
 pos_u16t tpcmdh_GetPosCmdU16(void)
 {
   return runTime.pccmdh.pos_cmd_u16;
 }
 
+/**
+ * @brief      This function get value @p direction_cmd produced by position command processer.
+ *
+ * @return     Current set value
+ */
 bool tpcmdh_GetDirection(void)
 {
   return runTime.pccmdh.direction_cmd;
 }
 
-//bool tpcmdh_CalcDirection(bool dir_curr, pos_u16t cmd, pos_u16t act, pos_u16t thold)
-//{
-//  if(dir_curr)
-//  {
-//    if((cmd - act) > thold)
-//    {
-//      dir_curr = !dir_curr;
-//    }
-//  }
-//  else
-//  {
-//    if((act - cmd) > thold)
-//    {
-//      dir_curr = !dir_curr;
-//    }
-//  }
-//
-//  return dir_curr;
-//}
+/**
+ * @}
+ */
