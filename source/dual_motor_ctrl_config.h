@@ -20,7 +20,7 @@ extern "C" {
 /*Default valus*/
 /*Hardware config*/
 #define DMOTC_DFLT_TQ_MOT_MAX_ABS_PC  99.9f
-#define DMOTC_DFLT_S_AXIS_MAX_ABS_RPM 5.0f
+#define DMOTC_DFLT_S_AXIS_MAX_ABS_RPM 10.0f
 
 /*PID config*/  
 #define DMOTC_DFLT_P_PID_KP           0.5f
@@ -39,7 +39,7 @@ extern "C" {
 
 /*Position mode config*/
 #define DMOTC_DFLT_POS_S_MIN          0.5f
-#define DMOTC_DFLT_POS_S_MAX          3.0f
+#define DMOTC_DFLT_POS_S_MAX          8.0f
 #define DMOTC_DFLT_POS_KP             0.2f /*Range: 0.01 ~ 1.0*/
 
 /*Position 2 mode config*/

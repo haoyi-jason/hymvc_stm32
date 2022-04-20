@@ -7,7 +7,7 @@
 #include "pos_ctrl.h"
 
 /*Module include*/
-#include "saturation.h"
+#include "dual_motor_ctrl/saturation.h"
 
 pos_u16t POSC_CalcPerr(bool dir, pos_u16t cmd, pos_u16t act)
 {

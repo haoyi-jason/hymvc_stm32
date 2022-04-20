@@ -342,10 +342,10 @@ static THD_FUNCTION(procCANRx,p){
     }
 
     runTime.state++;
-    if(runTime.state == 50){
+    if(runTime.state == 20){
       runTime.state = 0;
     }
-    chThdSleepMilliseconds(10);
+    chThdSleepMilliseconds(5);
   }
 }       
 
@@ -354,7 +354,7 @@ void task_communication_init(void)
   //analog_input_task_init();
   analog_output_task_init();
   resolver_task_init();
-  modbus_master_task_init();
+  //modbus_master_task_init();
   digital_init();
 //  canStart(&CAND1,&canCfg250K);
   at24eep_init(&I2CD2,32,1024,0x50,2);
@@ -491,7 +491,8 @@ int8_t pid_command(CANRxFrame *prx,CANTxFrame *ptx)
     uint8_t clr_fault = (prx->data8[0] >>2) & 0x01;
     uint8_t mode = (prx->data8[0] >> 4);
     uint8_t cmd_index = prx->data8[1];
-    int16_t cmd_value = prx->data16[1];
+    uint16_t cmd_value = prx->data16[1];
+    int16_t cmd_value_i16 = prx->data16[1];
 
     
     if(clr_fault)
@@ -509,11 +510,12 @@ int8_t pid_command(CANRxFrame *prx,CANTxFrame *ptx)
 
     uint8_t mode_readback = tdmotc_GetMode();
     float fv = 0.01f * ((float)cmd_value);
+    float fvs = 0.01f * ((float)cmd_value_i16);
 
     switch (mode_readback)
     {
       case TDMOTC_MODE_S:
-      tdmotc_SetSpeedCmd(fv);
+      tdmotc_SetSpeedCmd(fvs);
       break;
 
       case TDMOTC_MODE_P:

@@ -309,11 +309,11 @@ static THD_FUNCTION(procDMOTC ,p)
     }
 
     /*GPIO toggle*/
-    //chThdSleepMilliseconds(5);
+    chThdSleepMilliseconds(1);
     palClearPad(GPIOI, GPIOI_PIN6);
     
     /*Sleep*/
-    prev = chThdSleepUntilWindowed(prev, chTimeAddX(prev, TIME_MS2I(10)));
+    prev = chThdSleepUntilWindowed(prev, chTimeAddX(prev, TIME_MS2I(5)));
   }
 }
 
