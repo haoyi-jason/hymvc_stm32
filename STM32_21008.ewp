@@ -396,6 +396,7 @@
                     <state>D:\SourceRespo\freemodbus_src\mbmaster-v2.9.6\mbmaster-v2.9.6\mbmaster\tcp</state>
                     <state>$PROJ_DIR$\source\MBMPort</state>
                     <state>D:\SourceRespo\IAR_SRC_WS\hymvc_stm32\source\dual_motor_ctrl</state>
+                    <state>D:\SourceRespo\</state>
                 </option>
                 <option>
                     <name>CCStdIncCheck</name>
@@ -18377,6 +18378,9 @@
         </file>
         <file>
             <name>$PROJ_DIR$\source\can_frame_handler.h</name>
+        </file>
+        <file>
+            <name>$extsource$\ylib\numeric\Filters\iir.c</name>
         </file>
         <file>
             <name>$PROJ_DIR$\source\main.c</name>
