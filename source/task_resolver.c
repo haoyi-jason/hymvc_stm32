@@ -2,6 +2,7 @@
 #include "hal.h"
 #include "task_resolver.h"
 #include "ad2s_drv.h"
+#include "ylib/numeric/filters/iir.h"
 
 #define EV_UPDATE   EVENT_MASK(0)
 #define EV_PERIODIC     EVENT_MASK(1)
@@ -12,6 +13,8 @@ struct runTime{
   AD2S1210Driver *ad2s_dev;
   AD2S1210Driver *ad2s_dev2;
   virtual_timer_t vtResolver;
+  _float_filter_t speed[2];
+  _float_filter_t position[2];
 };
 
 static struct runTime runTime, *resolverRuntime;
@@ -27,6 +30,7 @@ static const SPIConfig spicfg_ad2s_dev0 = {
 static AD2S1210Config ad2s_config_dev0 = {
   &SPID5,
   &spicfg_ad2s_dev0,
+  0,
   RES_16b,
   GPIOF,6,
   GPIOB,8,
@@ -44,6 +48,7 @@ static AD2S1210Config ad2s_config_dev0 = {
 static AD2S1210Config ad2s_config_dev1 = {
   &SPID5,
   &spicfg_ad2s_dev0,
+  0,
   RES_16b,
   GPIOI,11,
   GPIOB,8,
@@ -83,6 +88,13 @@ static THD_FUNCTION(procAD2S ,p)
   ad2s_reset(runTime.ad2s_dev);
   ad2s_read_registers(runTime.ad2s_dev);
   
+  for(uint8_t i=0;i<2;i++){
+    runTime.speed[i].stages = 4;
+    runTime.speed[i].reset = 1;
+    runTime.position[i].stages = 4;
+    runTime.position[i].reset = 1;
+  }
+  
   while(!chThdShouldTerminateX()){
     eventmask_t evt = chEvtWaitAny(ALL_EVENTS);
     if(evt & EV_UPDATE){
@@ -93,6 +105,12 @@ static THD_FUNCTION(procAD2S ,p)
       ad2S_Refresh(runTime.ad2s_dev);
       //ad2s_read_registers(runTime.ad2s_dev);
       ad2S_Refresh(runTime.ad2s_dev2);
+      iir_insert_f(&runTime.speed[0],runTime.ad2s_dev->currentSpeed);
+      iir_insert_f(&runTime.speed[1],runTime.ad2s_dev2->currentSpeed);
+      iir_insert_f(&runTime.position[0],runTime.ad2s_dev->currentAngle);
+      iir_insert_f(&runTime.position[1],runTime.ad2s_dev2->currentAngle);
+      
+      
     }
     
   }
@@ -110,7 +128,8 @@ void resolver_task_init()
 float resolver_get_speed(uint8_t id)
 {
   if(id < 2){
-    return ad2s1210[id].currentSpeed;
+    //return ad2s1210[id].currentSpeed;
+    return runTime.speed[id].last;
   }
   return 0;
 }
@@ -118,8 +137,16 @@ float resolver_get_speed(uint8_t id)
 float resolver_get_position(uint8_t id)
 {
   if(id < 2){
-    return ad2s1210[id].currentAngle; 
+    //return ad2s1210[id].currentAngle; 
+    return runTime.position[id].last;
   }
   return 0;
 }
 
+float resolver_get_position_deg(uint8_t id)
+{
+  if(id < 2){
+    return (ad2s1210[id].currentAngle * 0.016667f); 
+  }
+  return 0.0f;
+}

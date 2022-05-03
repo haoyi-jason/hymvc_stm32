@@ -9,6 +9,7 @@
 #include "nvm_config.h"
 #include "task_mbmaster.h"
 #include "digital_io.h"
+#include "task_dual_motor_ctrl.h"
 
 int8_t config_handler(CANRxFrame *prx,CANTxFrame *ptx);
 int8_t id_handler(CANRxFrame *prx,CANTxFrame *ptx);
@@ -103,7 +104,112 @@ static void report_cb(void *arg)
 //  chSysUnlockFromISR();
 }
 
-#define NOF_CAN_PACKET  8
+static int16_t pid_get_cmd_value(uint8_t mode, uint8_t cmd_index)
+{
+  float output_f = 0.0;
+  int16_t output = 0;
+
+  switch (mode)
+  {
+    case TDMOTC_MODE_S:
+    output_f = tdmotc_GetSpeedCmd();
+    break;
+
+    case TDMOTC_MODE_P:
+    output_f = tpcmdh_GetPosCmd();
+    break;
+
+    case TDMOTC_MODE_P2:
+    output_f = tdmotc_GetPosCmd();
+    break;
+
+
+    default:
+    break;
+  }
+
+  output = (int16_t)(output_f * 0.01f);
+  return output;
+}
+
+//static int32_t pid_get_para_value(uint8_t cmd_index)
+static float pid_get_para_value(uint8_t cmd_index)
+{
+  int32_t output = 0.0f;
+  float output_f = 0.0f;
+  switch (cmd_index)
+  {
+    case CAN_GSID_KP_P:
+    //output_f = tdmotc_GetPID(TDMOTC_PID_P, TDMOTC_PID_ID_P);
+    output_f = tdmotc_GetPCCFG(TDMOTC_PCCFG_ID_KP);
+    break;
+
+    case CAN_GSID_KP_S:
+    output_f = tdmotc_GetPID(TDMOTC_PID_S, TDMOTC_PID_ID_P);
+    break;
+
+    case CAN_GSID_KI_S:
+    output_f = tdmotc_GetPID(TDMOTC_PID_S, TDMOTC_PID_ID_I);
+    break;
+
+    case CAN_GSID_KD_S:
+    output_f = tdmotc_GetPID(TDMOTC_PID_S, TDMOTC_PID_ID_D);
+    break;
+
+    case CAN_GSID_MOT_T_MAX_ABS:
+    output_f = tdmotc_GetMotTqMaxAbs();
+    break;
+
+    case CAN_GSID_MOT_S_MAX_ABS:
+    output_f = tdmotc_GetAxisSMaxAbs();
+    break;
+
+    case CAN_GSID_G_A2M:
+    /*Currently not avaliable*/
+    break;
+
+    case CAN_GSID_TQBC_MAX:
+    output_f = tdmotc_GetTQBC(TDMOTC_TQBC_ID_OUT_MAX);
+    break;
+
+    case CAN_GSID_TQBC_MIN:
+    output_f = tdmotc_GetTQBC(TDMOTC_TQBC_ID_OUT_MIN);
+    break;
+
+    case CAN_GSID_G:
+    output_f = tdmotc_GetTQBC(TDMOTC_TQBC_ID_GAIN);
+    break;
+
+    case CAN_GSID_ZCP:
+    output_f = tdmotc_GetTQBC(TDMOTC_TQBC_ID_ZCP);
+    break;
+
+    case CAN_GSID_PC_PERR_THOLD:
+    output_f = tdmotc_GetPCCFG(TDMOTC_PCCFG_ID_PERR_THOLD);
+    break;
+
+    case CAN_GSID_PC_S_CMD_MIN:
+    output_f = tdmotc_GetPCCFG(TDMOTC_PCCFG_ID_S_CMD_MIN);
+    break;
+
+    case CAN_GSID_PC_S_CMD_MAX:
+    output_f = tdmotc_GetPCCFG(TDMOTC_PCCFG_ID_S_CMD_MAX);
+    break;
+
+    case CAN_GSID_UPDATE:
+    /*This index has no get method.*/
+    break;
+
+    default:
+    /*Invalid index, do noting*/
+    break;
+  }
+
+//  output = tdmotc_ConvSig2CAN(output_f);
+  return output_f;
+}
+
+#define NOF_CAN_PACKET  11
 static THD_WORKING_AREA(waCANRX,4096);
 static THD_FUNCTION(procCANRx,p){
  // thread_t *parent = (thread_t)p;
@@ -141,6 +247,10 @@ static THD_FUNCTION(procCANRx,p){
   
   txFrames[6].EID = 0x140;
   txFrames[7].EID = 0x141;
+
+  txFrames[8].EID = 0x110;
+  txFrames[9].EID = 0x111;
+  txFrames[10].EID = 0x112;  
   
   while(!chThdShouldTerminateX()){
     eventmask_t evt = chEvtWaitAnyTimeout(ALL_EVENTS,TIME_IMMEDIATE);
@@ -191,9 +301,37 @@ static THD_FUNCTION(procCANRx,p){
         if(digital_get_iso_in(i)) dio |= (1 << i);
       }
       txFrames[7].data8[4] = dio;
+
+      // Build status 1
+      if(tdmotc_GetIsStart())
+      {
+        txFrames[8].data8[0] = (tdmotc_GetMode() + 2U);
+      }
+      else
+      {
+        txFrames[8].data8[0] = 1U;
+      }
+      txFrames[8].data16[2] = modbus_master_GetStatus(1);
+      txFrames[8].data16[3] = modbus_master_GetStatus(2);
       
+      float _signal_f = 0.0f;
+      // Build status 2
+      _signal_f = tdmotc_GetAxisSpeedAct();
+//      _signal_f = 5;
+//      txFrames[9].data32[0] = (int32_t)(_signal_f * 0.001f);
+      memcpy((uint8_t*)&txFrames[9].data32[0],(uint8_t*)&_signal_f,4);
+
+      // Build status 3
+      _signal_f = tdmotc_GetMotTqActV(0);
+      //txFrames[10].data32[0] = (int32_t)(_signal_f * 0.001f);
+      memcpy((uint8_t*)&txFrames[10].data32[0],(uint8_t*)&_signal_f,4);
+      _signal_f = tdmotc_GetMotTqActV(1);
+      memcpy((uint8_t*)&txFrames[10].data32[1],(uint8_t*)&_signal_f,4);
+//      txFrames[10].data32[1] = (int32_t)(_signal_f * 0.001f);
+            
       runTime.txFrameId = 0;
       break;
+
     default:
       if(runTime.txFrameId < NOF_CAN_PACKET){
         if(canTransmit(ip,CAN_ANY_MAILBOX,&txFrames[runTime.txFrameId],TIME_IMMEDIATE) == MSG_OK){
@@ -202,20 +340,21 @@ static THD_FUNCTION(procCANRx,p){
       }
       break;
     }
+
     runTime.state++;
-    if(runTime.state == 50){
+    if(runTime.state == 20){
       runTime.state = 0;
     }
-    chThdSleepMilliseconds(10);
+    chThdSleepMilliseconds(5);
   }
 }       
 
 void task_communication_init(void)
 {
-  analog_input_task_init();
+  //analog_input_task_init();
   analog_output_task_init();
   resolver_task_init();
-  modbus_master_task_init();
+  //modbus_master_task_init();
   digital_init();
 //  canStart(&CAND1,&canCfg250K);
   at24eep_init(&I2CD2,32,1024,0x50,2);
@@ -351,17 +490,51 @@ int8_t pid_command(CANRxFrame *prx,CANTxFrame *ptx)
     uint8_t clr_fault = (prx->data8[0] >>2) & 0x01;
     uint8_t mode = (prx->data8[0] >> 4);
     uint8_t cmd_index = prx->data8[1];
-    int16_t cmd_value = prx->data16[1];
+    uint16_t cmd_value = prx->data16[1];
+    int16_t cmd_value_i16 = prx->data16[1];
+
     
-    //- todo: add PID command api below
-    
+    if(clr_fault)
+    {
+      tdmotc_ResetFault();
+    }
+
+    if(2U == flag && (false == tdmotc_GetFault()))
+    {
+      tdmotc_Start(mode);
+    }
+    else if(1U == flag){ // stop
+      tdmotc_Stop();
+    }
+
+    uint8_t mode_readback = tdmotc_GetMode();
+    float fv = 0.01f * ((float)cmd_value);
+    float fvs = 0.01f * ((float)cmd_value_i16);
+
+    switch (mode_readback)
+    {
+      case TDMOTC_MODE_S:
+      tdmotc_SetSpeedCmd(fvs);
+      break;
+
+      case TDMOTC_MODE_P:
+      //tdmotc_SetPosCmd(fv);
+      tpcmdh_SetPosCmd(fv);
+      break;
+
+      case TDMOTC_MODE_P2:
+      tdmotc_SetPosCmd2(fv);
+      break;
+
+      default:
+      break;
+    }
   }
   else{ // REMOTE Request, GET
-    //- todo: fulfill variables below from pid command
-    uint8_t flag = pid_get_flag();
-    uint8_t mode = pid_get_mode();
+    uint8_t flag = tdmotc_GetIsStart();
+    uint8_t mode = tdmotc_GetMode();
     uint8_t cmd_index = prx->data8[1];
-    int16_t cmd_value = pid_get_cmd_value(cmd_index);
+    int16_t cmd_value = pid_get_cmd_value(mode, cmd_index);
     
     ptx->RTR = CAN_RTR_DATA;
     ptx->EID = prx->EID;
@@ -380,33 +553,104 @@ int8_t pid_command(CANRxFrame *prx,CANTxFrame *ptx)
 int8_t pid_parameter(CANRxFrame *prx,CANTxFrame *ptx)
 {
   int8_t ret = 0;
-  if(prx->RTR == CAN_RTR_DATA){
-    uint8_t cmd_index = prx->data8[0];
-    int32_t cmd_value;
-    // take care of byte order
-    memcpy((void*)&cmd_value,&prx->data8[1],4);
-    //- todo: add PID command api below
-    
-  }
-  else{ // REMOTE Request, GET
-    //- todo: fulfill variables below from pid command
-    uint8_t cmd_index = prx->data8[0];
-    int32_t cmd_value = pid_get_cmd_value(cmd_index);
-    
-    ptx->RTR = CAN_RTR_DATA;
-    ptx->EID = prx->EID;
-    ptx->IDE = prx->IDE;
-    ptx->DLC = 8;
-    
-    ptx->data8[0] = cmd_index;
-    memcpy(&ptx->data8[1], (void*)&cmd_value,4);
-    ret = 1;
+  if(prx->RTR == CAN_RTR_DATA){   
+    if(prx->DLC == 1){
+      //- todo: fulfill variables below from pid command
+      uint8_t cmd_index = prx->data8[0];
+      float cmd_value = pid_get_para_value(cmd_index);
+      
+      ptx->RTR = CAN_RTR_DATA;
+      ptx->EID = prx->EID;
+      ptx->IDE = prx->IDE;
+      ptx->DLC = 8;
+      
+      ptx->data8[0] = cmd_index;
+      memcpy(&ptx->data8[1], (void*)&cmd_value,4);
+      ret = 1;
+    }
+    else{
+      uint8_t cmd_index = prx->data8[0];
+      int32_t cmd_value;
+      // take care of byte order
+  //    memcpy((void*)&cmd_value,&prx->data8[1],4);
+      float cmd_value_f;// = tdmotc_ConvCAN2Sig(cmd_value);
+      memcpy((void*)&cmd_value_f,&prx->data8[1],4);
+
+      switch (cmd_index)
+      {
+        case CAN_GSID_KP_P:
+        //tdmotc_SetPID(TDMOTC_PID_P, TDMOTC_PID_ID_P, cmd_value_f);
+        tdmotc_SetPCCFG(TDMOTC_PCCFG_ID_KP, cmd_value_f);
+        break;
+
+        case CAN_GSID_KP_S:
+        tdmotc_SetPID(TDMOTC_PID_S, TDMOTC_PID_ID_P, cmd_value_f);
+        break;
+
+        case CAN_GSID_KI_S:
+        tdmotc_SetPID(TDMOTC_PID_S, TDMOTC_PID_ID_I, cmd_value_f);
+        break;
+
+        case CAN_GSID_KD_S:
+        tdmotc_SetPID(TDMOTC_PID_S, TDMOTC_PID_ID_D, cmd_value_f);
+        break;
+
+        case CAN_GSID_MOT_T_MAX_ABS:
+        tdmotc_SetMotTqMaxAbs(cmd_value_f);
+        break;
+
+        case CAN_GSID_MOT_S_MAX_ABS:
+        tdmotc_SetAxisSMaxAbs(cmd_value_f);
+        break;
+
+        case CAN_GSID_G_A2M:
+        /*Currently not avaliable*/
+        break;
+
+        case CAN_GSID_TQBC_MAX:
+        tdmotc_SetTQBC(TDMOTC_TQBC_ID_OUT_MAX, cmd_value_f);
+        break;
+
+        case CAN_GSID_TQBC_MIN:
+        tdmotc_SetTQBC(TDMOTC_TQBC_ID_OUT_MIN, cmd_value_f);
+        break;
+
+        case CAN_GSID_G:
+        tdmotc_SetTQBC(TDMOTC_TQBC_ID_GAIN, cmd_value_f);
+        break;
+
+        case CAN_GSID_ZCP:
+        tdmotc_SetTQBC(TDMOTC_TQBC_ID_ZCP, cmd_value_f);
+        break;
+
+        case CAN_GSID_UPDATE:
+        tdmotc_UpdateTQBC();
+        break;
+
+        case CAN_GSID_PC_PERR_THOLD:
+        tdmotc_SetPCCFG(TDMOTC_PCCFG_ID_PERR_THOLD, cmd_value_f);
+        break;
+
+        case CAN_GSID_PC_S_CMD_MIN:
+        tdmotc_SetPCCFG(TDMOTC_PCCFG_ID_S_CMD_MIN, cmd_value_f);
+        break;
+
+        case CAN_GSID_PC_S_CMD_MAX:
+        tdmotc_SetPCCFG(TDMOTC_PCCFG_ID_S_CMD_MAX, cmd_value_f);
+        break;
+
+        default:
+        /*Invalid index, do noting*/
+        break;
+      }
+      
+    }
+//  else{ // REMOTE Request, GET
   }
   return ret;
 }
+
 int8_t pid_request(CANRxFrame *prx,CANTxFrame *ptx)
 {
   
 }
-
-

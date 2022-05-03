@@ -19863,6 +19863,48 @@
     <group>
         <name>source</name>
         <group>
+            <name>dual_motor_controller</name>
+            <group>
+                <name>task</name>
+                <file>
+                    <name>$PROJ_DIR$\source\dual_motor_ctrl_config.h</name>
+                </file>
+                <file>
+                    <name>$PROJ_DIR$\source\task_dual_motor_ctrl.c</name>
+                </file>
+                <file>
+                    <name>$PROJ_DIR$\source\task_dual_motor_ctrl.h</name>
+                </file>
+            </group>
+            <file>
+                <name>$PROJ_DIR$\source\dual_motor_ctrl\bit_mask.h</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\source\dual_motor_ctrl\dual_motor_ctrl.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\source\dual_motor_ctrl\dual_motor_ctrl.h</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\source\dual_motor_ctrl\pid_controller.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\source\dual_motor_ctrl\pid_controller.h</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\source\dual_motor_ctrl\saturation.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\source\dual_motor_ctrl\saturation.h</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\source\dual_motor_ctrl\tq_bias_calc.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\source\dual_motor_ctrl\tq_bias_calc.h</name>
+            </file>
+        </group>
+        <group>
             <name>FreeModbus</name>
             <group>
                 <name>Master_v296</name>
@@ -20099,11 +20141,29 @@
                 <name>$PROJ_DIR$\source\MBMPort\mbporttimer.c</name>
             </file>
         </group>
+        <group>
+            <name>Position_Control</name>
+            <file>
+                <name>$PROJ_DIR$\source\pos_ctrl.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\source\pos_ctrl.h</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\source\task_pos_cmd_handler.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\source\task_pos_cmd_handler.h</name>
+            </file>
+        </group>
         <file>
             <name>$PROJ_DIR$\source\can_frame_handler.c</name>
         </file>
         <file>
             <name>$PROJ_DIR$\source\can_frame_handler.h</name>
+        </file>
+        <file>
+            <name>$extsource$\ylib\numeric\Filters\iir.c</name>
         </file>
         <file>
             <name>$PROJ_DIR$\source\main.c</name>

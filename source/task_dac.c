@@ -77,6 +77,7 @@ static THD_FUNCTION(procAD57 ,p)
         for(uint8_t i=0;i<4;i++){
           if(runTime.updateChannelMask & (1<<i)){
             ad57_set_dac(runTime.ad57,i);
+            runTime.updateChannelMask &= ~(1<<i); // clear
           }
         }
       }
@@ -153,7 +154,7 @@ int8_t analog_output_set_voltage(uint8_t channel, float *dacv)
   }
   else if(channel < 4){
     runTime.ad57->data[channel] = get_raw_value(*dacv);
-    runTime.updateChannelMask = (1 << channel);
+    runTime.updateChannelMask |= (1 << channel);
   }
   else{
     ret = -1;

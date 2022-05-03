@@ -4,13 +4,40 @@
 #include "task_dac.h"
 #include "task_resolver.h"
 #include "task_communication.h"
+#include "task_pos_cmd_handler.h"
+#include "task_dual_motor_ctrl.h"
+//#include "task_mbmaster.h"
+#include "task_dac.h"
+
+//static long speed = 0;
+//static long pos = 0;
+static long counter = 0;
+// static float output_sequence[4] = {-1.5f, 0.0f, 1.5f, 0.0f};
+
+//static uint8_t sequence_index = 0;
 
 int main(void)
 {
   halInit();
-  chSysInit();;
+  chSysInit();
+  tpcmdh_taskInit();
   task_communication_init();
+  tdmotc_algorithm_task_init();
+
+  
   while(1){
-    chThdSleepMilliseconds(100);
+    if(!(counter % 100))
+    {
+      //modbus_master_WriteCtrl(1, 3);
+      //sequence_index %= 4;
+      //analog_output_set_voltage(0, &output_sequence[0]);
+      //sequence_index++;
+      //
+      counter = 0;
+    }
+    //speed = modbus_master_GetSpeed();
+    //pos = modbus_master_GetPosition();
+    counter++;
+    chThdSleepMilliseconds(10);
   }
 }

@@ -340,7 +340,13 @@ void ad2s_reset(AD2S1210Driver *dev)
 msg_t ad2S_Refresh(AD2S1210Driver *dev)
 {
   normalRead(dev);
-  dev->currentAngle = dev->position * POS_LSB[dev->config->resolution];
-  dev->currentSpeed = dev->velocity * VEL_LSB[dev->config->resolution];
+  if(dev->config->reverse){
+    dev->currentAngle = 360-dev->position * POS_LSB[dev->config->resolution];
+    dev->currentSpeed = -dev->velocity * VEL_LSB[dev->config->resolution];
+  }
+  else{
+    dev->currentAngle = dev->position * POS_LSB[dev->config->resolution];
+    dev->currentSpeed = dev->velocity * VEL_LSB[dev->config->resolution];
+  }
   return MSG_OK;
 }

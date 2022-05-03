@@ -38,6 +38,7 @@ typedef struct AD2S1210Driver AD2S1210Driver;
 typedef struct{
   SPIDriver *devp;
   const SPIConfig *config;
+  uint8_t reverse;
   uint8_t resolution;
   ioportid_t ssport;
   ioportmask_t ssline;
