@@ -10,6 +10,7 @@
 #include "task_mbmaster.h"
 #include "digital_io.h"
 #include "task_dual_motor_ctrl.h"
+#include "task_pos_cmd_handler.h"
 
 int8_t config_handler(CANRxFrame *prx,CANTxFrame *ptx);
 int8_t id_handler(CANRxFrame *prx,CANTxFrame *ptx);
@@ -51,6 +52,8 @@ struct runTime{
   event_listener_t elCAN;
   uint16_t state;
   uint8_t txFrameId;
+  systime_t start,stop;
+  systime_t elapsed;
 };
 
 struct _nvmParam{
@@ -135,13 +138,21 @@ static int16_t pid_get_cmd_value(uint8_t mode, uint8_t cmd_index)
 //static int32_t pid_get_para_value(uint8_t cmd_index)
 static float pid_get_para_value(uint8_t cmd_index)
 {
-  int32_t output = 0.0f;
+  //int32_t output = 0.0f;
   float output_f = 0.0f;
   switch (cmd_index)
   {
     case CAN_GSID_KP_P:
-    //output_f = tdmotc_GetPID(TDMOTC_PID_P, TDMOTC_PID_ID_P);
-    output_f = tdmotc_GetPCCFG(TDMOTC_PCCFG_ID_KP);
+    output_f = tdmotc_GetPID(TDMOTC_PID_P, TDMOTC_PID_ID_P);
+    //output_f = tdmotc_GetPCCFG(TDMOTC_PCCFG_ID_KP);
+    break;
+
+    case CAN_GSID_KI_P:
+    output_f = tdmotc_GetPID(TDMOTC_PID_P, TDMOTC_PID_ID_I);
+    break;
+
+    case CAN_GSID_KD_P:
+    output_f = tdmotc_GetPID(TDMOTC_PID_P, TDMOTC_PID_ID_D);
     break;
 
     case CAN_GSID_KP_S:
@@ -251,8 +262,9 @@ static THD_FUNCTION(procCANRx,p){
   txFrames[8].EID = 0x110;
   txFrames[9].EID = 0x111;
   txFrames[10].EID = 0x112;  
-  
+  systime_t now;
   while(!chThdShouldTerminateX()){
+      runTime.start = chVTGetSystemTime();
     eventmask_t evt = chEvtWaitAnyTimeout(ALL_EVENTS,TIME_IMMEDIATE);
     if(evt & EVENT_MASK(0)){
       while(canReceive(ip,CAN_ANY_MAILBOX,&rxMsg,TIME_IMMEDIATE) == MSG_OK){
@@ -342,10 +354,13 @@ static THD_FUNCTION(procCANRx,p){
     }
 
     runTime.state++;
-    if(runTime.state == 20){
+    if(runTime.state >= 20){
       runTime.state = 0;
     }
+
     chThdSleepMilliseconds(5);
+    runTime.stop = chVTGetSystemTime();
+    runTime.elapsed = TIME_I2MS(chVTTimeElapsedSinceX(runTime.start));
   }
 }       
 
@@ -485,11 +500,12 @@ int8_t heartBeatHandler(CANRxFrame *prx,CANTxFrame *ptx)
 int8_t pid_command(CANRxFrame *prx,CANTxFrame *ptx)
 {
   int8_t ret = 0;
-  if(prx->RTR == CAN_RTR_DATA){
+  if(prx->RTR == CAN_RTR_DATA)
+  {
     uint8_t flag = prx->data8[0] & 0x03;
     uint8_t clr_fault = (prx->data8[0] >>2) & 0x01;
     uint8_t mode = (prx->data8[0] >> 4);
-    uint8_t cmd_index = prx->data8[1];
+    //uint8_t cmd_index = prx->data8[1];
     uint16_t cmd_value = prx->data16[1];
     int16_t cmd_value_i16 = prx->data16[1];
 
@@ -553,7 +569,8 @@ int8_t pid_command(CANRxFrame *prx,CANTxFrame *ptx)
 int8_t pid_parameter(CANRxFrame *prx,CANTxFrame *ptx)
 {
   int8_t ret = 0;
-  if(prx->RTR == CAN_RTR_DATA){   
+  if(prx->RTR == CAN_RTR_DATA){
+    
     if(prx->DLC == 1){
       //- todo: fulfill variables below from pid command
       uint8_t cmd_index = prx->data8[0];
@@ -570,7 +587,7 @@ int8_t pid_parameter(CANRxFrame *prx,CANTxFrame *ptx)
     }
     else{
       uint8_t cmd_index = prx->data8[0];
-      int32_t cmd_value;
+      //int32_t cmd_value;
       // take care of byte order
   //    memcpy((void*)&cmd_value,&prx->data8[1],4);
       float cmd_value_f;// = tdmotc_ConvCAN2Sig(cmd_value);
@@ -579,8 +596,16 @@ int8_t pid_parameter(CANRxFrame *prx,CANTxFrame *ptx)
       switch (cmd_index)
       {
         case CAN_GSID_KP_P:
-        //tdmotc_SetPID(TDMOTC_PID_P, TDMOTC_PID_ID_P, cmd_value_f);
-        tdmotc_SetPCCFG(TDMOTC_PCCFG_ID_KP, cmd_value_f);
+        tdmotc_SetPID(TDMOTC_PID_P, TDMOTC_PID_ID_P, cmd_value_f);
+        //tdmotc_SetPCCFG(TDMOTC_PCCFG_ID_KP, cmd_value_f);
+        break;
+
+        case CAN_GSID_KI_P:
+        tdmotc_SetPID(TDMOTC_PID_P, TDMOTC_PID_ID_I, cmd_value_f);
+        break;
+
+        case CAN_GSID_KD_P:
+        tdmotc_SetPID(TDMOTC_PID_P, TDMOTC_PID_ID_D, cmd_value_f);
         break;
 
         case CAN_GSID_KP_S:
@@ -639,7 +664,7 @@ int8_t pid_parameter(CANRxFrame *prx,CANTxFrame *ptx)
         tdmotc_SetPCCFG(TDMOTC_PCCFG_ID_S_CMD_MAX, cmd_value_f);
         break;
 
-        default:
+      default:
         /*Invalid index, do noting*/
         break;
       }
@@ -654,3 +679,4 @@ int8_t pid_request(CANRxFrame *prx,CANTxFrame *ptx)
 {
   
 }
+

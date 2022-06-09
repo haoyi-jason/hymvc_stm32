@@ -21,6 +21,7 @@ extern "C" {
 #include <stdbool.h>
   
 /*Module include*/
+#include "dual_motor_ctrl/pid_controller.h"
 
 /*Typedef*/
 typedef uint16_t pos_u16t;    /**<  @brief  Position type in u16. Range from 0 - 65535*/
@@ -81,11 +82,40 @@ typedef struct
   .kp = val_kp\
 }
 
+typedef struct
+{
+  POSC_CFG_HANDLE_T cfg;
+  PID_CFG_T pid_cfg;
+  PID_HANDLE_T pid;
+  POSC_CMD_HANDLE_T cmd;
+  pos_u16t perr;
+  float speed_cmd_rpm;
+  uint16_t last_cmd;
+  uint16_t last_pos;
+  uint8_t dir_changed;
+  uint16_t last_err;
+  uint16_t pos_hist[32];
+  uint16_t last_pos_hist[32];
+  uint8_t dir_hist[32];
+  uint8_t last_dir_hist[32];
+  uint8_t posIndex;
+} POSC_HANDLE_T;
 
 /*Functions*/
+void POSC_Init( POSC_HANDLE_T *ppch, 
+                float _pos_err_thold_u16, 
+                float _s_cmd_min, 
+                float _s_cmd_max,
+                float _kp,
+                float _ki,
+                float _kd);
+void POSC_ResetData();
+void POSC_Restart(POSC_HANDLE_T *ppch);
+
 pos_u16t POSC_CalcPerr(bool dir, pos_u16t cmd, pos_u16t act);
 bool POSC_CalcDirection(bool dir_curr, pos_u16t cmd, pos_u16t act, pos_u16t thold);
-float POSC_Run(POSC_CMD_HANDLE_T *ppcmdh, POSC_CFG_HANDLE_T *ppccfgh, pos_u16t act);
+//float POSC_Run(POSC_CMD_HANDLE_T *ppcmdh, POSC_CFG_HANDLE_T *ppccfgh, pos_u16t act);
+float POSC_Run(POSC_HANDLE_T *ppch, pos_u16t act);
 
 /*Helper functions*/
 pos_u16t POSC_ConvertDeg2U16(float degree);

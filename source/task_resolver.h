@@ -6,5 +6,5 @@ void resolver_task_init();
 float resolver_get_speed(uint8_t id);
 float resolver_get_position(uint8_t id);
 float resolver_get_position_deg(uint8_t id);
-
+uint16_t resolver_get_position_raw(uint8_t id);
 #endif

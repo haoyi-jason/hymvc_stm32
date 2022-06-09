@@ -19,6 +19,7 @@ extern "C" {
 
 /*Standard include*/
 #include <stdint.h>
+#include <stdbool.h>
 //#include "unit_test_pid_controller.h"
 
 /*Other include*/
@@ -99,6 +100,9 @@ typedef struct
 /*Functions*/
 pid_msg_t PID_Init(PID_HANDLE_T *ph, PID_CFG_T *pcfgh);
 pid_msg_t PID_RunPID(PID_HANDLE_T *ph, float cmd, float act, float out_aft_sat,float *p_out);
+pid_msg_t PID_RunPIDCore(PID_HANDLE_T *ph, float err, bool output_is_saturate, float *p_out);
+pid_msg_t PID_RunPIDExtErr(PID_HANDLE_T *ph, float err, float out_aft_sat,float *p_out);
+
 float PID_GetOutput(PID_HANDLE_T *ph);
 pid_msg_t PID_Restart(PID_HANDLE_T *ph);
 

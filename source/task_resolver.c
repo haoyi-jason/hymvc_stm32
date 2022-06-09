@@ -15,6 +15,7 @@ struct runTime{
   virtual_timer_t vtResolver;
   _float_filter_t speed[2];
   _float_filter_t position[2];
+  _int_filter_t position_u[2];
 };
 
 static struct runTime runTime, *resolverRuntime;
@@ -93,6 +94,8 @@ static THD_FUNCTION(procAD2S ,p)
     runTime.speed[i].reset = 1;
     runTime.position[i].stages = 4;
     runTime.position[i].reset = 1;
+    runTime.position_u[i].stages = 4;
+    runTime.position_u[i].reset = 1;
   }
   
   while(!chThdShouldTerminateX()){
@@ -110,7 +113,8 @@ static THD_FUNCTION(procAD2S ,p)
       iir_insert_f(&runTime.position[0],runTime.ad2s_dev->currentAngle);
       iir_insert_f(&runTime.position[1],runTime.ad2s_dev2->currentAngle);
       
-      
+      iir_insert(&runTime.position_u[0],(int32_t)runTime.ad2s_dev->position);
+      iir_insert(&runTime.position_u[1],(int32_t)runTime.ad2s_dev2->position);
     }
     
   }
@@ -149,4 +153,12 @@ float resolver_get_position_deg(uint8_t id)
     return (ad2s1210[id].currentAngle * 0.016667f); 
   }
   return 0.0f;
+}
+
+uint16_t resolver_get_position_raw(uint8_t id)
+{
+  if(id < 2){
+    return (uint16_t)runTime.position_u[id].last;
+  }
+  return 0;
 }

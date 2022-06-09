@@ -165,6 +165,132 @@ pid_msg_t PID_RunPID(PID_HANDLE_T *ph, float cmd, float act, float out_aft_sat,f
   return result;
 }
 
+
+pid_msg_t PID_RunPIDCore(PID_HANDLE_T *ph, float err, bool output_is_saturate, float *p_out)
+{
+  /*Private variable*/
+  pid_msg_t result = PID_MSG_INIT;
+
+  if((NULL == ph) || (NULL == p_out))
+  {
+    /*Pointer error*/
+    result = PID_MSG_ERR_PTR;
+  }
+
+  if(PID_MSG_INIT == result)
+  {
+    if(!isfinite(err))
+    {
+      /*Input value is NaN*/
+      result = PID_MSG_ERR_IN;
+    }
+  }
+
+  if(PID_MSG_INIT == result)
+  {
+
+    /*Process PID*/
+    ph->data.val_aft_kp = err * ph->pcfg->kp;
+    ph->data.val_aft_kd = ((err - ph->data.err_last) * (ph->pcfg->kd));
+    
+    /*Run integral if clamp flag is low*/
+    if(!output_is_saturate)
+    {
+      /*Continue to integral if clamped flag is low*/
+      ph->data.err_sum += err;
+    }
+    
+    ph->data.val_aft_ki = ph->data.err_sum * ph->pcfg->ki;
+
+    ph->out = (ph->data.val_aft_kp) + (ph->data.val_aft_ki) + (ph->data.val_aft_kd);
+    *p_out = ph->out;
+
+    /*Updeate err_last*/
+    ph->data.err_last = err;
+
+    result = PID_MSG_OK;
+  }
+
+  return result;
+}
+
+pid_msg_t PID_RunPIDExtErr(PID_HANDLE_T *ph, float err, float out_aft_sat,float *p_out)
+{
+  /*Private variable*/
+  pid_msg_t result = PID_MSG_INIT;
+  bool _integral_is_clamped = false;
+
+  if((NULL == ph) || (NULL == p_out))
+  {
+    /*Pointer error*/
+    result = PID_MSG_ERR_PTR;
+  }
+
+  if(PID_MSG_INIT == result)
+  {
+    if(!isfinite(err) || !isfinite(out_aft_sat))
+    {
+      /*Input value is NaN*/
+      result = PID_MSG_ERR_IN;
+    }
+  }
+
+  if(PID_MSG_INIT == result)
+  {
+    /*Process integral clamping*/
+    if(out_aft_sat != ph->out)
+    {
+      /*Saturation detected*/
+      /*Check for sign of output and sign of error*/
+      /*Clamp if sign are identical*/
+      if((ph->out > 0) && (err > 0))
+      {
+        /*Set _integral_is_clamped*/
+        _integral_is_clamped = true;
+      }
+      else if((ph->out <= 0) && (err <= 0))
+      {
+        /*Set _integral_is_clamped*/
+        _integral_is_clamped = true;
+      }
+      else
+      {
+        /*Do nothing*/
+      }
+    }
+
+    /*Process PID*/
+    ph->data.val_aft_kp = err * ph->pcfg->kp;
+    ph->data.val_aft_kd = ((err - ph->data.err_last) * (ph->pcfg->kd));
+    
+    /*Run integral if clamp flag is low*/
+    if(!_integral_is_clamped)
+    {
+      /*Continue to integral if clamped flag is low*/
+      ph->data.err_sum += err;
+    }
+    
+    ph->data.val_aft_ki = ph->data.err_sum * ph->pcfg->ki;
+
+    ph->out = (ph->data.val_aft_kp) + (ph->data.val_aft_ki) + (ph->data.val_aft_kd);
+    *p_out = ph->out;
+
+    /*Updeate err_last*/
+    ph->data.err_last = err;
+
+    result = PID_MSG_OK;
+
+/*Print debug message if macro is defined*/
+#ifdef PID_DEBUG_WITH_STDIO
+        /*Print out process*/
+        PID_PrintData(&(ph->data));
+        PID_PrintInterface(ph);
+#endif
+  }
+
+  return result;
+}
+
 /**
  * @brief      Get output value of PID controller.
  * 

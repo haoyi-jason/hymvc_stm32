@@ -30,6 +30,7 @@ struct runTime{
   binary_semaphore_t pccmdh_bsem;
   float    pos_cmd_user;
   POSC_CMD_HANDLE_T pccmdh;
+  bool newCommand;
 };
 
 static struct runTime runTime, *pcmdhRuntime;
@@ -73,6 +74,7 @@ static THD_FUNCTION(procPCMDH ,p)
       chSysLock();
       memcpy(&runTime.pccmdh, &_privpccmdh, sizeof(POSC_CMD_HANDLE_T));
       chSysUnlock();
+      runTime.newCommand = true;
     }
   }
 }
@@ -99,7 +101,11 @@ void tpcmdh_taskInit(void)
   runTime.pccmdh.pos_cmd_u16 = 0U;
   runTime.pccmdh.direction_cmd = true;
 
+  runTime.newCommand = false;
+  
   pcmdhRuntime = &runTime;
+  
+  
 
   /*Init Semaphore*/
   tpcmdh_bsemInit();
@@ -162,7 +168,13 @@ pos_u16t tpcmdh_GetPosCmdU16(void)
  */
 bool tpcmdh_GetDirection(void)
 {
+  runTime.newCommand = false;
   return runTime.pccmdh.direction_cmd;
+}
+
+bool tpcmdh_NewCommand(void)
+{
+  return runTime.newCommand;
 }
 
 /**

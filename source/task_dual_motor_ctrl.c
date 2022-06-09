@@ -77,11 +77,13 @@ static float gain_set = DMOTC_DFLT_GAIN;              /**< @brief  Slop of bias 
 static float zcp_set = DMOTC_DFLT_ZCP;                /**< @brief  Zero crossing point set.*/
 
 /*Position control related*/
-static POSC_CMD_HANDLE_T pccmdh = DFLT_INIT_POSC_CMD_HANDLE_T(); /**< @brief  Position controller data handle.*/
+POSC_HANDLE_T posch;
+
+//static POSC_CMD_HANDLE_T pccmdh = DFLT_INIT_POSC_CMD_HANDLE_T(); /**< @brief  Position controller data handle.*/
 /**
  * @brief  Configuration handle of position controller.
  */
-static POSC_CFG_HANDLE_T pccfgh = INIT_POSC_CFG_HANDLE_T(POSC_ON_THOLD_U16, DMOTC_DFLT_POS_S_MIN, DMOTC_DFLT_POS_S_MAX, DMOTC_DFLT_POS_KP);
+//static POSC_CFG_HANDLE_T pccfgh = INIT_POSC_CFG_HANDLE_T(POSC_ON_THOLD_U16, DMOTC_DFLT_POS_S_MIN, DMOTC_DFLT_POS_S_MAX, DMOTC_DFLT_POS_KP);
 
 /*Contorl related signal*/
 static bool dmotc_is_good = true;                     /**< @brief  Flag task is good.*/
@@ -150,6 +152,15 @@ static THD_FUNCTION(procDMOTC ,p)
     dmotc_is_good = false;
   }
 
+  /*Init position controller to default value*/
+  POSC_Init(&posch, 
+             POSC_ON_THOLD_U16, 
+             DMOTC_DFLT_POS_S_MIN, 
+             DMOTC_DFLT_POS_S_MAX,
+             DMOTC_DFLT_P_PID_KP,
+             DMOTC_DFLT_P_PID_KI,
+             DMOTC_DFLT_P_PID_KD);
+
 
   /*Start algorithm*/
 
@@ -167,7 +178,8 @@ static THD_FUNCTION(procDMOTC ,p)
       {
         /*Starting*/
         /*Restart position PID*/
-        PID_Restart(&pospid);
+        //PID_Restart(&pospid);
+        POSC_Restart(&posch);
 
         /*Reset privite variable*/
         _priv_speeed_cmd_rpm  = 0.0f;
@@ -245,17 +257,22 @@ static THD_FUNCTION(procDMOTC ,p)
       if(TDMOTC_MODE_P == mode)
       {
         /*Get command values*/
-        chSysLock();
-        pccmdh.pos_cmd_u16 = tpcmdh_GetPosCmdU16();
-        pccmdh.direction_cmd = tpcmdh_GetDirection();
-        chSysUnlock();
+        //pccmdh.pos_cmd_u16 = tpcmdh_GetPosCmdU16();
+        //pccmdh.direction_cmd = tpcmdh_GetDirection();
+        if(tpcmdh_NewCommand()){
+          chSysLock();
+          posch.cmd.pos_cmd_u16 = tpcmdh_GetPosCmdU16();
+          posch.cmd.direction_cmd = tpcmdh_GetDirection();
+          chSysUnlock();
+        }
 
         /*Get actual value and convert*/
         pos_act_deg = _GetPosDEG();
-        _priv_pos_act_u16 = POSC_ConvertDeg2U16(pos_act_deg);
-
+        _priv_pos_act_u16 = POSC_ConvertDeg2U16(pos_act_deg); // map 0..359.999 degree to 0 to 65536 u16
+        _priv_pos_act_u16 = resolver_get_position_raw(0);
         /*Run position control algorithm*/
-        _priv_speeed_cmd_rpm = POSC_Run(&pccmdh, &pccfgh, _priv_pos_act_u16);
+        //_priv_speeed_cmd_rpm = POSC_Run(&pccmdh, &pccfgh, _priv_pos_act_u16);
+        _priv_speeed_cmd_rpm =  POSC_Run(&posch, _priv_pos_act_u16);
       }
       else if(TDMOTC_MODE_P2 == mode)
       {
@@ -312,11 +329,11 @@ static THD_FUNCTION(procDMOTC ,p)
     }
 
     /*GPIO toggle*/
-    chThdSleepMilliseconds(1);
+    //chThdSleepMilliseconds(5);
     palClearPad(GPIOI, GPIOI_PIN6);
     
     /*Sleep*/
-    prev = chThdSleepUntilWindowed(prev, chTimeAddX(prev, TIME_MS2I(5)));
+    prev = chThdSleepUntilWindowed(prev, chTimeAddX(prev, TIME_MS2I(10)));
   }
 }
 
@@ -534,9 +551,25 @@ void tdmotc_SetPID(uint8_t pid, uint8_t pid_index, float val)
         {
           val = 0.0f;
         }
-        pidcfg_pos.kp = val;
+        posch.pid_cfg.kp = val;
         break;
-  
+        
+        case TDMOTC_PID_ID_I:
+        if(val <= 0.0f)
+        {
+          val = 0.0f;
+        }
+        posch.pid_cfg.ki = val;
+        break;
+        
+        case TDMOTC_PID_ID_D:
+        if(val <= 0.0f)
+        {
+          val = 0.0f;
+        }
+        posch.pid_cfg.kd = val;
+        break;
+        
         default:
         /*Invalid pid_index*/
         break;
@@ -581,7 +614,15 @@ float tdmotc_GetPID(uint8_t pid, uint8_t pid_index)
     switch (pid_index)
     {
       case TDMOTC_PID_ID_P:
-      value = pidcfg_pos.kp;
+      value = posch.pid_cfg.kp;
+      break;
+
+      case TDMOTC_PID_ID_I:
+      value = posch.pid_cfg.ki;
+      break;
+
+      case TDMOTC_PID_ID_D:
+      value = posch.pid_cfg.kd;
       break;
 
       default:
@@ -797,43 +838,43 @@ void tdmotc_SetPCCFG(uint8_t index, float val)
     switch (index)
     {
       case TDMOTC_PCCFG_ID_PERR_THOLD:
-      POSC_SetCfgPErrThold(&pccfgh, val);
+      POSC_SetCfgPErrThold(&posch.cfg, val);
       break;
 
       case TDMOTC_PCCFG_ID_S_CMD_MIN:
       if(val < 0.0f)
       {
-        POSC_SetCfgSCmdMin(&pccfgh, 0.0f);
+        POSC_SetCfgSCmdMin(&posch.cfg, 0.0f);
       }
       else
       {
-        POSC_SetCfgSCmdMin(&pccfgh, val);
+        POSC_SetCfgSCmdMin(&posch.cfg, val);
       }
       break;
       
       case TDMOTC_PCCFG_ID_S_CMD_MAX:
       if(val < 0.0f)
       {
-        POSC_SetCfgSCmdMax(&pccfgh, 0.0f);
+        POSC_SetCfgSCmdMax(&posch.cfg, 0.0f);
       }
       else
       {
-        POSC_SetCfgSCmdMax(&pccfgh, val);
+        POSC_SetCfgSCmdMax(&posch.cfg, val);
       }
       break;
       
       case TDMOTC_PCCFG_ID_KP:
       if(val < 0.0f)
       {
-        POSC_SetCfgKp(&pccfgh, 0.0f);
+        POSC_SetCfgKp(&posch.cfg, 0.0f);
       }
       else if( val > 1.0f)
       {
-        POSC_SetCfgKp(&pccfgh, 1.0f);
+        POSC_SetCfgKp(&posch.cfg, 1.0f);
       }
       else
       {
-        POSC_SetCfgKp(&pccfgh, val);
+        POSC_SetCfgKp(&posch.cfg, val);
       }
       break;
 
@@ -852,19 +893,19 @@ float tdmotc_GetPCCFG(uint8_t index)
   {
 
     case TDMOTC_PCCFG_ID_PERR_THOLD:
-    retval = POSC_GetCfgPErrThold(&pccfgh);
+    retval = POSC_GetCfgPErrThold(&posch.cfg);
     break;
 
     case TDMOTC_PCCFG_ID_S_CMD_MIN:
-    retval = POSC_GetCfgSCmdMin(&pccfgh);
+    retval = POSC_GetCfgSCmdMin(&posch.cfg);
     break;
     
     case TDMOTC_PCCFG_ID_S_CMD_MAX:
-    retval = POSC_GetCfgSCmdMax(&pccfgh);
+    retval = POSC_GetCfgSCmdMax(&posch.cfg);
     break;
     
     case TDMOTC_PCCFG_ID_KP:
-    retval = POSC_GetCfgKp(&pccfgh);
+    retval = POSC_GetCfgKp(&posch.cfg);
     break;
 
     default:
