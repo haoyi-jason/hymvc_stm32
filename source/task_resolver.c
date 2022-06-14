@@ -14,7 +14,7 @@ struct runTime{
   AD2S1210Driver *ad2s_dev2;
   virtual_timer_t vtResolver;
   _float_filter_t speed[2];
-  _float_filter_t position[2];
+  _float_filter_circular_t position[2];
   _int_filter_t position_u[2];
 };
 
@@ -110,8 +110,8 @@ static THD_FUNCTION(procAD2S ,p)
       ad2S_Refresh(runTime.ad2s_dev2);
       iir_insert_f(&runTime.speed[0],runTime.ad2s_dev->currentSpeed);
       iir_insert_f(&runTime.speed[1],runTime.ad2s_dev2->currentSpeed);
-      iir_insert_f(&runTime.position[0],runTime.ad2s_dev->currentAngle);
-      iir_insert_f(&runTime.position[1],runTime.ad2s_dev2->currentAngle);
+      iir_insert_circular_f(&runTime.position[0],runTime.ad2s_dev->currentAngle/60.);
+      iir_insert_circular_f(&runTime.position[1],runTime.ad2s_dev2->currentAngle/60.);
       
       iir_insert(&runTime.position_u[0],(int32_t)runTime.ad2s_dev->position);
       iir_insert(&runTime.position_u[1],(int32_t)runTime.ad2s_dev2->position);
@@ -142,7 +142,7 @@ float resolver_get_position(uint8_t id)
 {
   if(id < 2){
     //return ad2s1210[id].currentAngle; 
-    return runTime.position[id].last;
+    return runTime.position[id].last*60;
   }
   return 0;
 }

@@ -26,11 +26,11 @@
  * @brief      Structure of thread resources.
  */
 struct runTime{
-  thread_t *self;
-  binary_semaphore_t pccmdh_bsem;
-  float    pos_cmd_user;
-  POSC_CMD_HANDLE_T pccmdh;
-  bool newCommand;
+  thread_t            *self;
+  binary_semaphore_t  pccmdh_bsem;
+  float               pos_cmd_user;
+  POSC_CMD_HANDLE_T   pccmdh;
+  bool                new_command;
 };
 
 static struct runTime runTime, *pcmdhRuntime;
@@ -54,27 +54,30 @@ static THD_FUNCTION(procPCMDH ,p)
       _priv_pos_act_u16 = POSC_ConvertDeg2U16(resolver_get_position_deg(0));
       _priv_speed_act = resolver_get_speed(0);
 
-      if(_priv_speed_act > 0.005f)
-      {
-        /*Rotate in positive direction*/
-        _privpccmdh.direction_cmd = POSC_CalcDirection(true, _privpccmdh.pos_cmd_u16, _priv_pos_act_u16, POSC_ALT_DIR_THOLD_U16);
-      }
-      else if(_priv_speed_act < -0.005f)
-      {
-        /*Rotate in negative direction*/
-        _privpccmdh.direction_cmd = POSC_CalcDirection(false, _privpccmdh.pos_cmd_u16, _priv_pos_act_u16, POSC_ALT_DIR_THOLD_U16);
-      }
-      else
-      {
-        /*Stop or very slow at the moment*/
-        _privpccmdh.direction_cmd = POSC_CalcDirection(true, _privpccmdh.pos_cmd_u16, _priv_pos_act_u16, POSC_POSU16_180DEG);
-      }
+      /*Use 180 degree as the only threshold at the moment.*/
+      _privpccmdh.direction_cmd = POSC_CalcDirection(true, _privpccmdh.pos_cmd_u16, _priv_pos_act_u16, POSC_POSU16_180DEG);
+
+      //if(_priv_speed_act > 0.005f)
+      //{
+      //  /*Rotate in positive direction*/
+      //  _privpccmdh.direction_cmd = POSC_CalcDirection(true, _privpccmdh.pos_cmd_u16, _priv_pos_act_u16, POSC_ALT_DIR_THOLD_U16);
+      //}
+      //else if(_priv_speed_act < -0.005f)
+      //{
+      //  /*Rotate in negative direction*/
+      //  _privpccmdh.direction_cmd = POSC_CalcDirection(false, _privpccmdh.pos_cmd_u16, _priv_pos_act_u16, POSC_ALT_DIR_THOLD_U16);
+      //}
+      //else
+      //{
+      //  /*Stop or very slow at the moment*/
+      //  _privpccmdh.direction_cmd = POSC_CalcDirection(true, _privpccmdh.pos_cmd_u16, _priv_pos_act_u16, POSC_POSU16_180DEG);
+      //}
 
       /*Write to runTime*/
       chSysLock();
+      runTime.new_command = true;
       memcpy(&runTime.pccmdh, &_privpccmdh, sizeof(POSC_CMD_HANDLE_T));
       chSysUnlock();
-      runTime.newCommand = true;
     }
   }
 }
@@ -101,11 +104,7 @@ void tpcmdh_taskInit(void)
   runTime.pccmdh.pos_cmd_u16 = 0U;
   runTime.pccmdh.direction_cmd = true;
 
-  runTime.newCommand = false;
-  
   pcmdhRuntime = &runTime;
-  
-  
 
   /*Init Semaphore*/
   tpcmdh_bsemInit();
@@ -168,13 +167,22 @@ pos_u16t tpcmdh_GetPosCmdU16(void)
  */
 bool tpcmdh_GetDirection(void)
 {
-  runTime.newCommand = false;
   return runTime.pccmdh.direction_cmd;
 }
 
-bool tpcmdh_NewCommand(void)
+void tpcmdh_GetCommand(POSC_CMD_HANDLE_T *p_handle_out)
 {
-  return runTime.newCommand;
+  if(NULL != p_handle_out)
+  {
+    p_handle_out->pos_cmd_u16 = tpcmdh_GetPosCmdU16();
+    p_handle_out->direction_cmd = tpcmdh_GetDirection();
+    runTime.new_command = false;
+  }
+}
+
+bool tpcmdh_CmdIsAvailable()
+{
+  return runTime.new_command;
 }
 
 /**

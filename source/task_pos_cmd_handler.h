@@ -32,7 +32,9 @@ void tpcmdh_SetPosCmd(float val);
 float tpcmdh_GetPosCmd(void);
 pos_u16t tpcmdh_GetPosCmdU16(void);
 bool tpcmdh_GetDirection(void);
-bool tpcmdh_NewCommand(void);
+void tpcmdh_GetCommand(POSC_CMD_HANDLE_T *p_handle_out);
+bool tpcmdh_CmdIsAvailable();
+
 #ifdef __cplusplus
 }
 #endif

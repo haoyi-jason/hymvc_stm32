@@ -46,12 +46,8 @@ void POSC_Init( POSC_HANDLE_T *ppch,
 
     /*Reset IO value*/
     ppch->perr = 0U;
+    ppch->perr_f = 0.0f;
     ppch->speed_cmd_rpm = 0.0f;
-    
-    ppch->last_cmd = 0;
-    ppch->last_pos = 0;
-    ppch->dir_changed = 0;
-    ppch->posIndex = 0;
   }
 }
 
@@ -75,29 +71,16 @@ void POSC_Restart(POSC_HANDLE_T *ppch)
 pos_u16t POSC_CalcPerr(bool dir, pos_u16t cmd, pos_u16t act)
 {
   pos_u16t retval;
-  static int32_t err;
-  static pos_u16t t1,t2;
-  t1 = cmd;
-  t2 = act;
 
   if(dir)
   {
-    //err = (cmd > act)?(cmd - act):((0xffff - act) + cmd); 
     retval = cmd - act;
   }
   else
   {
-//    err = (act > cmd)?(act - cmd):((0xffff - cmd) + act);
     retval = act - cmd;
   }
 
-//  retval = (pos_u16t)err;
-//  if(retval > 32768){
-//    uint16_t tmp = retval;
-//  }
-  
-  
-  
   return retval;
 }
 
@@ -130,67 +113,55 @@ bool POSC_CalcDirection(bool dir_curr, pos_u16t cmd, pos_u16t act, pos_u16t thol
  *
  * @return     Platform target speed in rpm.
  */
-  static uint16_t ttt;
 //float POSC_Run(POSC_CMD_HANDLE_T *ppccmdh, POSC_CFG_HANDLE_T *ppccfgh, pos_u16t act)
 float POSC_Run(POSC_HANDLE_T *ppch, pos_u16t act)
 {
-  ttt = act;
   /*Declare private variables*/
   float retval = 0.0f;
-  //float _speeed_cmd_rpm = 0.0f;
-  //bool  _output_is_saturate = false;
-
-  //POSC_CMD_HANDLE_T _priv_pccmdh = DFLT_INIT_POSC_CMD_HANDLE_T();
-  //pos_u16t _perr;
-
 
   if(NULL != ppch)
   {
     /*Proceed*/
-    ppch->perr = POSC_CalcPerr(ppch->cmd.direction_cmd, ppch->cmd.pos_cmd_u16, act);
+    /*Get error in pos_u16t format*/
+    ppch->perr = ppch->cmd.pos_cmd_u16 - act;
 
-    /*Run direction calculator to handle possible overshoot if ppch->perr is within range.*/
-//    if((ppch->perr < POSC_POSU16_45DEG) || (ppch->perr > POSC_POSU16_315DEG))
-//    {
-//      ppch->cmd.direction_cmd = POSC_CalcDirection(ppch->cmd.direction_cmd, ppch->cmd.pos_cmd_u16, act, POSC_POSU16_180DEG);
-//      ppch->perr = POSC_CalcPerr(ppch->cmd.direction_cmd, ppch->cmd.pos_cmd_u16, act);
-//    }
-    
-//    ppch->pos_hist[ppch->posIndex & 0x1F] = act;
-//    ppch->dir_hist[ppch->posIndex++ & 0x1F] = ppch->cmd.direction_cmd?1:0;
-
-    if(ppch->perr > POSC_POSU16_180DEG){
-      ppch->cmd.direction_cmd = !ppch->cmd.direction_cmd;
-      ppch->perr = 0xFFFF - ppch->perr;
-      ppch->last_pos = act;
-      ppch->last_cmd = ppch->cmd.pos_cmd_u16;
-      ppch->dir_changed++;
-      ppch->last_err = ppch->perr;
-      ppch->last_pos_hist[ppch->posIndex & 0x1F] = act;
-      ppch->last_dir_hist[ppch->posIndex++ & 0x1F] = ppch->cmd.direction_cmd?1:0;
-      //memcpy(ppch->last_pos_hist, ppch->pos_hist, 64);
-      //memcpy(ppch->last_dir_hist, ppch->dir_hist,32);
-    }
-
-    if(ppch->perr >= ppch->cfg.pos_err_thold_u16)
+    /*Convert error to float*/
+    if(ppch->perr > POSC_POSU16_180DEG)
     {
-      (void)PID_RunPIDExtErr(&(ppch->pid), ((float)ppch->perr * POSC_PREGAIN_1), ppch->speed_cmd_rpm, &(ppch->speed_cmd_rpm));
+      /*Convert to negative sign.*/
+      ppch->perr_f = ((float)ppch->perr - (float)POSC_POSU16_MAX - 1.0f); 
+    }
+    else
+    {
+      /*Remain positive sign*/
+      ppch->perr_f = (float)ppch->perr;
+    }
+    
+    if((ppch->perr_f >= (float)ppch->cfg.pos_err_thold_u16) || (ppch->perr_f <= ((float)ppch->cfg.pos_err_thold_u16 * -1.0f)))
+    {
+      /*perr_f larger than threshold*/
+      (void)PID_RunPIDExtErr(&(ppch->pid), (ppch->perr_f * POSC_PREGAIN_1), ppch->speed_cmd_rpm, &(ppch->speed_cmd_rpm));
 
-      //retval = ((float)_perr * POSC_PREGAIN_1 * (ppccfgh->kp)) + ppccfgh->s_cmd_min;
-      ppch->speed_cmd_rpm = SAT_fSat(ppch->speed_cmd_rpm, ppch->cfg.s_cmd_min, ppch->cfg.s_cmd_max);
-      retval = ppch->speed_cmd_rpm;
-
-      if(!ppch->cmd.direction_cmd)
-      {+
-        
-        /*Negative direction*/
-        retval *= -1.0f;
+      if(ppch->speed_cmd_rpm > 0.0f)
+      {
+        ppch->speed_cmd_rpm += ppch->cfg.s_cmd_min;
       }
+      else if(ppch->speed_cmd_rpm < 0.0f)
+      {
+        ppch->speed_cmd_rpm -= ppch->cfg.s_cmd_min;
+      }
+      else
+      {
+        /*ppch->speed_cmd_rpm = 0, this should not happen.*/
+      }
+
+      ppch->speed_cmd_rpm = SAT_fSat(ppch->speed_cmd_rpm, (-1.0f * ppch->cfg.s_cmd_max), ppch->cfg.s_cmd_max);
+      retval = ppch->speed_cmd_rpm;
     }
     else
     {
       /*Reset PID if error within threshold*/
-      //(void)PID_Restart(&(ppch->pid));
+      (void)PID_Restart(&(ppch->pid));
     }
   }
 

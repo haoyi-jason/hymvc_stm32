@@ -257,19 +257,19 @@ static THD_FUNCTION(procDMOTC ,p)
       if(TDMOTC_MODE_P == mode)
       {
         /*Get command values*/
-        //pccmdh.pos_cmd_u16 = tpcmdh_GetPosCmdU16();
-        //pccmdh.direction_cmd = tpcmdh_GetDirection();
-        if(tpcmdh_NewCommand()){
-          chSysLock();
-          posch.cmd.pos_cmd_u16 = tpcmdh_GetPosCmdU16();
-          posch.cmd.direction_cmd = tpcmdh_GetDirection();
-          chSysUnlock();
+        chSysLock();
+        if(tpcmdh_CmdIsAvailable())
+        {
+          tpcmdh_GetCommand(&(posch.cmd));
+          //posch->cmd.pos_cmd_u16 = tpcmdh_GetPosCmdU16();
+          //posch->cmd.direction_cmd = tpcmdh_GetDirection();
         }
+        chSysUnlock();
 
         /*Get actual value and convert*/
         pos_act_deg = _GetPosDEG();
-        _priv_pos_act_u16 = POSC_ConvertDeg2U16(pos_act_deg); // map 0..359.999 degree to 0 to 65536 u16
-        _priv_pos_act_u16 = resolver_get_position_raw(0);
+        _priv_pos_act_u16 = POSC_ConvertDeg2U16(pos_act_deg);
+
         /*Run position control algorithm*/
         //_priv_speeed_cmd_rpm = POSC_Run(&pccmdh, &pccfgh, _priv_pos_act_u16);
         _priv_speeed_cmd_rpm =  POSC_Run(&posch, _priv_pos_act_u16);
