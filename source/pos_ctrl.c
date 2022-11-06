@@ -12,8 +12,8 @@
 #include "pos_ctrl.h"
 
 /*Module include*/
-#include "dual_motor_ctrl/saturation.h"
-#include "dual_motor_ctrl/pid_controller.h"
+#include "saturation.h"
+#include "pid_controller.h"
 
 
 void POSC_Init( POSC_HANDLE_T *ppch, 
@@ -46,7 +46,6 @@ void POSC_Init( POSC_HANDLE_T *ppch,
 
     /*Reset IO value*/
     ppch->perr = 0U;
-    ppch->perr_f = 0.0f;
     ppch->speed_cmd_rpm = 0.0f;
   }
 }
@@ -118,45 +117,38 @@ float POSC_Run(POSC_HANDLE_T *ppch, pos_u16t act)
 {
   /*Declare private variables*/
   float retval = 0.0f;
+  //float _speeed_cmd_rpm = 0.0f;
+  //bool  _output_is_saturate = false;
+
+  //POSC_CMD_HANDLE_T _priv_pccmdh = DFLT_INIT_POSC_CMD_HANDLE_T();
+  //pos_u16t _perr;
+
 
   if(NULL != ppch)
   {
     /*Proceed*/
-    /*Get error in pos_u16t format*/
-    ppch->perr = ppch->cmd.pos_cmd_u16 - act;
+    ppch->perr = POSC_CalcPerr(ppch->cmd.direction_cmd, ppch->cmd.pos_cmd_u16, act);
 
-    /*Convert error to float*/
-    if(ppch->perr > POSC_POSU16_180DEG)
+    /*Run direction calculator to handle possible overshoot if ppch->perr is within range.*/
+    if((ppch->perr < POSC_POSU16_45DEG) || (ppch->perr > POSC_POSU16_315DEG))
     {
-      /*Convert to negative sign.*/
-      ppch->perr_f = ((float)ppch->perr - (float)POSC_POSU16_MAX - 1.0f); 
+      ppch->cmd.direction_cmd = POSC_CalcDirection(ppch->cmd.direction_cmd, ppch->cmd.pos_cmd_u16, act, POSC_POSU16_180DEG);
+      ppch->perr = POSC_CalcPerr(ppch->cmd.direction_cmd, ppch->cmd.pos_cmd_u16, act);
     }
-    else
-    {
-      /*Remain positive sign*/
-      ppch->perr_f = (float)ppch->perr;
-    }
-    
-    if((ppch->perr_f >= (float)ppch->cfg.pos_err_thold_u16) || (ppch->perr_f <= ((float)ppch->cfg.pos_err_thold_u16 * -1.0f)))
-    {
-      /*perr_f larger than threshold*/
-      (void)PID_RunPIDExtErr(&(ppch->pid), (ppch->perr_f * POSC_PREGAIN_1), ppch->speed_cmd_rpm, &(ppch->speed_cmd_rpm));
 
-      if(ppch->speed_cmd_rpm > 0.0f)
-      {
-        ppch->speed_cmd_rpm += ppch->cfg.s_cmd_min;
-      }
-      else if(ppch->speed_cmd_rpm < 0.0f)
-      {
-        ppch->speed_cmd_rpm -= ppch->cfg.s_cmd_min;
-      }
-      else
-      {
-        /*ppch->speed_cmd_rpm = 0, this should not happen.*/
-      }
+    if(ppch->perr >= ppch->cfg.pos_err_thold_u16)
+    {
+      (void)PID_RunPIDExtErr(&(ppch->pid), ((float)ppch->perr * POSC_PREGAIN_1), ppch->speed_cmd_rpm, &(ppch->speed_cmd_rpm));
 
-      ppch->speed_cmd_rpm = SAT_fSat(ppch->speed_cmd_rpm, (-1.0f * ppch->cfg.s_cmd_max), ppch->cfg.s_cmd_max);
+      //retval = ((float)_perr * POSC_PREGAIN_1 * (ppccfgh->kp)) + ppccfgh->s_cmd_min;
+      ppch->speed_cmd_rpm = SAT_fSat(ppch->speed_cmd_rpm, ppch->cfg.s_cmd_min, ppch->cfg.s_cmd_max);
       retval = ppch->speed_cmd_rpm;
+
+      if(!ppch->cmd.direction_cmd)
+      {
+        /*Negative direction*/
+        retval *= -1.0f;
+      }
     }
     else
     {

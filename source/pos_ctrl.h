@@ -21,7 +21,7 @@ extern "C" {
 #include <stdbool.h>
   
 /*Module include*/
-#include "dual_motor_ctrl/pid_controller.h"
+#include "pid_controller.h"
 
 /*Typedef*/
 typedef uint16_t pos_u16t;    /**<  @brief  Position type in u16. Range from 0 - 65535*/
@@ -43,7 +43,7 @@ typedef uint16_t pos_u16t;    /**<  @brief  Position type in u16. Range from 0 -
  * @name Preset values
  * @{
  */
-#define   POSC_POSU16_180DEG      ((pos_u16t)32768) 
+#define   POSC_POSU16_180DEG      ((pos_u16t)32767) 
 #define   POSC_POSU16_45DEG       ((pos_u16t)8191) 
 #define   POSC_POSU16_315DEG      ((pos_u16t)57343) 
 /** @} */
@@ -89,7 +89,6 @@ typedef struct
   PID_HANDLE_T pid;
   POSC_CMD_HANDLE_T cmd;
   pos_u16t perr;
-  float    perr_f;
   float speed_cmd_rpm;
 } POSC_HANDLE_T;
 
@@ -101,7 +100,7 @@ void POSC_Init( POSC_HANDLE_T *ppch,
                 float _kp,
                 float _ki,
                 float _kd);
-//void POSC_ResetData();
+void POSC_ResetData();
 void POSC_Restart(POSC_HANDLE_T *ppch);
 
 pos_u16t POSC_CalcPerr(bool dir, pos_u16t cmd, pos_u16t act);
