@@ -23,20 +23,20 @@ static const SPIConfig spicfg_ad57 = {
   NULL,
   NULL,
   NULL,
-  SPI_CR1_BR_2
+  SPI_CR1_BR_2 | SPI_CR1_BR_1
 };
 
 static AD57Config ad57config = {
-  &SPID2,
+  &SPID4,
   &spicfg_ad57,
-  GPIOB,
-  12,
-  GPIOC,
-  12,
-  GPIOA,
-  15,
-  GPIOI,
-  3,
+  GPIOE, // sync
+  4,
+  GPIOI, // latch
+  7,
+  GPIOC, // rst
+  13,
+  GPIOI, // bin
+  6,
 };
 
 static AD57x4Driver ad57;
@@ -61,11 +61,12 @@ static THD_FUNCTION(procAD57 ,p)
   for(uint8_t i=0;i<4;i++){
     runTime.ad57->data[i] = 0x0;
   }
-  ad57_set_dac(runTime.ad57,0xff);
+  0ad57_set_dac(runTime.ad57,0xff);
 
   
   chVTObjectInit(&runTime.vtDAC);
-  //chVTSet(&runTime.vtDAC,TIME_MS2I(100),ad57_to,NULL);
+  // for test purpose, uncomment below line
+  chVTSet(&runTime.vtDAC,TIME_MS2I(100),ad57_to,NULL);
   ad57_set_simulataneous_update(runTime.ad57,1);
   while(!chThdShouldTerminateX()){
     eventmask_t evt = chEvtWaitAny(ALL_EVENTS);

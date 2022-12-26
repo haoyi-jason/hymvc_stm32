@@ -26,28 +26,28 @@ static const SPIConfig spicfg_ad76 = {
 };
 
 static AD7606Config ad7606config = {
-  &SPID4,
+  &SPID5,
   &spicfg_ad76,
-  GPIOE,
-  4,
-  GPIOI,
-  5,
-  GPIOI,
+  GPIOF, // cs
   6,
-  GPIOB,
+  GPIOF, //convsta
+  10,
+  GPIOI, // convstb
+  11,
+  GPIOI, // busy
+  8,
+  GPIOI, // rst
+  10,
+  GPIOI, // fst data
   9,
-  GPIOI,
-  7,
-  GPIOI,
-  4,
-  GPIOH,
-  13,
-  GPIOH,
-  14,
-  GPIOH,
-  15,
-  GPIOI,
-  0
+  GPIOH, // os0
+  2,
+  GPIOC, // os1
+  3,
+  GPIOC, // os2
+  2,
+  GPIOC, // stby
+  1
 };
 
 static void ad7606_to(void *arg)
@@ -83,7 +83,7 @@ static THD_FUNCTION(procAD7606 ,p)
       ad7606_read_conversion(runTime.ad7606,2);
     }
     if(evt & EV_AD7606_ACQ){
-      ad7606_start_conv(runTime.ad7606,1);
+      ad7606_start_conv(runTime.ad7606,3);
     }
   }
   

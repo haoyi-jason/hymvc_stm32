@@ -88,7 +88,7 @@ msg_t ad7606_init(AD7606Driver *dev, AD7606Config *config)
   if(dev == NULL) return MSG_RESET;
   
   dev->config = config;
-  dev->chipID = AD7608;
+  dev->chipID = AD7606;
   
   return MSG_OK;
 }
@@ -133,20 +133,20 @@ msg_t ad7606_start(AD7606Driver *dev)
   */
   if(!DBG_CHECK(dev->config->port_os0)){
     palSetPadMode(dev->config->port_os0, dev->config->pad_os0,PAL_MODE_OUTPUT_PUSHPULL);
-    palClearPad(dev->config->port_os0, dev->config->pad_os0);
+    palSetPad(dev->config->port_os0, dev->config->pad_os0);
   }
   if(!DBG_CHECK(dev->config->port_os1)){
     palSetPadMode(dev->config->port_os1, dev->config->pad_os1,PAL_MODE_OUTPUT_PUSHPULL);
-    palSetPad(dev->config->port_os1,dev->config->pad_os1);
+    palClearPad(dev->config->port_os1,dev->config->pad_os1);
   }
   if(!DBG_CHECK(dev->config->port_os2)){
     palSetPadMode(dev->config->port_os2, dev->config->pad_os2,PAL_MODE_OUTPUT_PUSHPULL);
-    palSetPad(dev->config->port_os2,dev->config->pad_os2);
+    palClearPad(dev->config->port_os2,dev->config->pad_os2);
   }
   if(!DBG_CHECK(dev->config->port_stby)){
     palSetPadMode(dev->config->port_stby, dev->config->pad_stby,PAL_MODE_OUTPUT_PUSHPULL);
-//    palClearPad(dev->config->port_stby,dev->config->pad_stby);
-    palSetPad(dev->config->port_stby,dev->config->pad_stby);
+    palClearPad(dev->config->port_stby,dev->config->pad_stby);
+//    palSetPad(dev->config->port_stby,dev->config->pad_stby);
   }
   
   // register busy line for falling edge trigger
@@ -203,17 +203,24 @@ void byteMap(int32_t *dst, uint8_t *arr, uint8_t bitStart)
   *(ptr+2) = *(src+1);
   *(ptr+1) = *(src + 2);
   *dst <<= shift;
-  *dst >>=14;
 }
 
 void ad7606_read_conversion(AD7606Driver *dev, uint8_t nofGroup)
 {
   uint8_t b[18];
   uint8_t nofTransfer = 0;
-  if(dev->chipID == AD7606)
+  uint8_t bitsPerRecord ;
+  uint8_t nofCh = 0;
+  if(dev->chipID == AD7606){
+    nofCh = 8;
     nofTransfer = nofGroup * 8;
-  else if(dev->chipID == AD7608)
+    bitsPerRecord = 16;
+  }
+  else if(dev->chipID == AD7608){
+    nofCh = 8;
     nofTransfer = nofGroup * 9;
+    bitsPerRecord = 18;
+  }
   
   if(nofTransfer == 0) return;
   
@@ -232,8 +239,15 @@ void ad7606_read_conversion(AD7606Driver *dev, uint8_t nofGroup)
   
 //  uint8_t start, shift;
 //  uint8_t bits = nofTransfer*8;
-  uint8_t bitsPerRecord = 18;
-  for(uint8_t i=0;i<8;i++){
+  for(uint8_t i=0;i<nofCh;i++){
     byteMap(&dev->data[i],b,bitsPerRecord*i);
+    switch(dev->chipID){
+    case AD7606:
+      dev->data[i] >>= 16;
+      break;
+    case AD7608:
+      dev->data[i] >>= 14;
+      break;
+    }
   }
 }

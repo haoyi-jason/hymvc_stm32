@@ -366,11 +366,11 @@ static THD_FUNCTION(procCANRx,p){
 
 void task_communication_init(void)
 {
-  //analog_input_task_init();
+  analog_input_task_init();
   analog_output_task_init();
   resolver_task_init();
   //modbus_master_task_init();
-  digital_init();
+  //digital_init();
 //  canStart(&CAND1,&canCfg250K);
   at24eep_init(&I2CD2,32,1024,0x50,2);
   commRuntime = &runTime;

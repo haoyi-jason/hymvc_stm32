@@ -167,7 +167,7 @@ static THD_FUNCTION(procDMOTC ,p)
   while(!chThdShouldTerminateX())
   {
     /*Timing*/
-    palSetPad(GPIOI, GPIOI_PIN6);
+    //palSetPad(GPIOI, GPIOI_PIN6);
 
     /*Run periodically*/
     /*State contol*/
@@ -260,8 +260,8 @@ static THD_FUNCTION(procDMOTC ,p)
         chSysLock();
         //pccmdh.pos_cmd_u16 = tpcmdh_GetPosCmdU16();
         //pccmdh.direction_cmd = tpcmdh_GetDirection();
-        posch->cmd.pos_cmd_u16 = tpcmdh_GetPosCmdU16();
-        posch->cmd.direction_cmd = tpcmdh_GetDirection();
+        posch.cmd.pos_cmd_u16 = tpcmdh_GetPosCmdU16();
+        posch.cmd.direction_cmd = tpcmdh_GetDirection();
         chSysUnlock();
 
         /*Get actual value and convert*/
@@ -328,7 +328,7 @@ static THD_FUNCTION(procDMOTC ,p)
 
     /*GPIO toggle*/
     //chThdSleepMilliseconds(5);
-    palClearPad(GPIOI, GPIOI_PIN6);
+    //palClearPad(GPIOI, GPIOI_PIN6);
     
     /*Sleep*/
     prev = chThdSleepUntilWindowed(prev, chTimeAddX(prev, TIME_MS2I(10)));

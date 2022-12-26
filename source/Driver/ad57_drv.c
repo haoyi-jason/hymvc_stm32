@@ -31,16 +31,19 @@ static void registerRead(AD57x4Driver *dev, uint8_t reg_adr, uint8_t *b, uint16_
   spiAcquireBus(dev->config->devp);
   spiStart(dev->config->devp, dev->config->config);
   chipSel(dev,1);
-  spiSend(dev->config->devp,3,tx);
-  chipSel(dev,0);
-  tx[0] = reg_adr;
-  delay(20);
-  chipSel(dev,1);
-  spiReceive(dev->config->devp,3,rx);
+  spiExchange(dev->config->devp,3,tx,rx);
+//  spiSend(dev->config->devp,3,tx);
+//  chipSel(dev,0);
+//  tx[0] = reg_adr;
+//  delay(20);
+//  chipSel(dev,1);
+//  spiReceive(dev->config->devp,3,rx);
   chipSel(dev,0);
   spiStop(dev->config->devp);
   spiReleaseBus(dev->config->devp);
-  memcpy(b,&rx[1],2);
+  b[0] = rx[2];
+  b[1] = rx[1];
+//  memcpy(b,&rx[1],2);
 }
 
 static void registerWrite(AD57x4Driver *dev, uint8_t reg_adr, uint8_t *b, uint16_t n)

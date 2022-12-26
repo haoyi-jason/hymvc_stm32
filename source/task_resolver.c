@@ -29,25 +29,43 @@ static const SPIConfig spicfg_ad2s_dev0 = {
 };
 
 static AD2S1210Config ad2s_config_dev0 = {
-  &SPID5,
+  &SPID2,
   &spicfg_ad2s_dev0,
-  0,
-  RES_16b,
-  GPIOF,6,
-  GPIOB,8,
-  NULL,0,
-  GPIOG,14,
-  GPIOG,13,
-  GPIOB,4,
-  GPIOB,3,
-  GPIOC,13,
-  GPIOB,7,
-  GPIOD,4,
-  GPIOD,5,
+  0,            // reverse
+  RES_16b,      // resolution
+  GPIOB,12,      // cs
+  NULL,8,      // soe
+  NULL,0,       // fsync
+  GPIOC,5,     // a0
+  GPIOB,0,     // a1
+  NULL,4,      // res0
+  NULL,3,      // res1
+  GPIOH,8,     // rst
+  GPIOB,10,      // sample
+  NULL,4,      // rd
+  GPIOB,12,      // wr
 };
 
 static AD2S1210Config ad2s_config_dev1 = {
-  &SPID5,
+  &SPID2,
+  &spicfg_ad2s_dev0,
+  0,            // reverse
+  RES_16b,      // resolution
+  GPIOC,4,      // cs
+  NULL,8,      // soe
+  NULL,0,       // fsync
+  GPIOC,5,      // a0
+  GPIOB,0,      // a1
+  NULL,4,      // res0
+  NULL,3,      // res1
+  GPIOH,8,      // rst
+  GPIOB,10,     // sample
+  NULL,4,      // rd
+  GPIOC,4,      // wr
+};
+
+static AD2S1210Config ad2s_config_dev2 = {
+  &SPID1,
   &spicfg_ad2s_dev0,
   0,
   RES_16b,
