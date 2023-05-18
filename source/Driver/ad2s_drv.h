@@ -79,8 +79,9 @@ typedef struct{
   uint8_t ctrl; \
   uint8_t fault; \
   float currentAngle; \
-  float currentSpeed;
-
+  float currentSpeed; \
+  int16_t pos_signed; \
+  float currentAngleRad;
 
 struct AD2S1210Driver{
   AD2S1210Config *config;

@@ -2,6 +2,7 @@
 #include "hal.h"
 #include "task_dac.h"
 #include "ad57_drv.h"
+#include "app_config.h"
 
 #define EV_UPDATE_DAC   EVENT_MASK(0)
 #define EV_PERIODIC     EVENT_MASK(1)
@@ -11,6 +12,7 @@
 
 struct runTime{
   thread_t *self;
+  thread_t *main;
   AD57x4Driver *ad57;
   virtual_timer_t vtDAC;
   uint8_t updateChannelMask;
@@ -23,7 +25,7 @@ static const SPIConfig spicfg_ad57 = {
   NULL,
   NULL,
   NULL,
-  SPI_CR1_BR_2 | SPI_CR1_BR_1
+  SPI_CR1_BR_2 |  SPI_CR1_CPHA
 };
 
 static AD57Config ad57config = {
@@ -52,21 +54,36 @@ static void ad57_to(void *arg)
 static THD_WORKING_AREA(waAD57,1024);
 static THD_FUNCTION(procAD57 ,p)
 {
+  _dac_config *config = (_dac_config*)p;
+  
   ad57_init(runTime.ad57,&ad57config);
   ad57_start(runTime.ad57);
+  
   ad57_get_corse_gain(runTime.ad57,0xff);
   ad57_get_fine_gain(runTime.ad57);
   ad57_get_offset(runTime.ad57);
   
+//  for(uint8_t i=0;i<AD57_CHANNELS;i++){
+//    runTime.ad57->corse_gain[i] = config->corse_gain[i];
+    
   for(uint8_t i=0;i<4;i++){
     runTime.ad57->data[i] = 0x0;
   }
-  0ad57_set_dac(runTime.ad57,0xff);
+
+  memcpy(runTime.ad57->corse_gain, config->corse_gain, AD57_CHANNELS*sizeof(uint16_t));
+  memcpy(runTime.ad57->fine_gain, config->fine_gain, AD57_CHANNELS*sizeof(uint16_t));
+  memcpy(runTime.ad57->offset, config->offset, AD57_CHANNELS*sizeof(uint16_t));
+  
+  ad57_set_corse_gain(runTime.ad57,0xff);
+  ad57_set_fine_gain(runTime.ad57,0xff);
+  ad57_set_offset(runTime.ad57,0xff);
+  
+  ad57_set_dac(runTime.ad57,0xff);
 
   
   chVTObjectInit(&runTime.vtDAC);
   // for test purpose, uncomment below line
-  chVTSet(&runTime.vtDAC,TIME_MS2I(100),ad57_to,NULL);
+  //chVTSet(&runTime.vtDAC,TIME_MS2I(100),ad57_to,NULL);
   ad57_set_simulataneous_update(runTime.ad57,1);
   while(!chThdShouldTerminateX()){
     eventmask_t evt = chEvtWaitAny(ALL_EVENTS);
@@ -82,6 +99,7 @@ static THD_FUNCTION(procAD57 ,p)
           }
         }
       }
+      chEvtSignal(runTime.main,EV_DAC_UPDATED);
     }
     
     if(evt & EV_PERIODIC){
@@ -91,14 +109,23 @@ static THD_FUNCTION(procAD57 ,p)
       ad57_set_dac(runTime.ad57,0xff);
     }
   }
- 
+  chThdExit(MSG_OK);
 }
 
-void analog_output_task_init()
+void analog_output_task_init(void *config)
 {
   runTime.ad57 = &ad57;
   dacRuntime = &runTime;
-  runTime.self = chThdCreateStatic(waAD57,sizeof(waAD57),NORMALPRIO,procAD57,NULL);
+  runTime.main = chRegFindThreadByName("MAIN");
+  runTime.self = chThdCreateStatic(waAD57,sizeof(waAD57),NORMALPRIO,procAD57,config);
+}
+
+void analog_output_task_stop()
+{
+  if(runTime.self != NULL){
+    chThdTerminate(runTime.self);
+    chThdWait(runTime.self);
+  }
 }
 
 int8_t analog_output_set_update_on_write(uint8_t flag)
@@ -141,6 +168,18 @@ static int16_t get_raw_value(float value)
   // map raw data from +/- 10v
   float r = (value)/10.;
   ret = r * 32768;
+  return ret;
+}
+
+int8_t analot_output_get_raw(uint8_t channel, uint16_t *data)
+{
+  int8_t ret = 0;
+  if(channel == 0xff){
+    memcpy(data,runTime.ad57->data,8);
+  }
+  else if(channel < 4){
+    *data = runTime.ad57->data[channel];
+  }
   return ret;
 }
 

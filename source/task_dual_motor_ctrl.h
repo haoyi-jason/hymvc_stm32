@@ -21,6 +21,8 @@ extern "C" {
 
 /*Standard include*/
 #include <stdint.h>
+
+  
   
 /*Typedef*/
 typedef uint8_t   tdmotc_mode_t;    /**<  @brief  Mode type.*/ 
@@ -56,42 +58,43 @@ typedef uint8_t   tdmotc_msg_t;
 
 /*Functions*/
 /*Task control*/
-void tdmotc_algorithm_task_init(void);
-void tdmotc_Start(tdmotc_mode_t _mode);
-void tdmotc_Stop(void);
+void tdmotc_algorithm_task_init(void *config, void *config_el, uint8_t m);
+void tdmotc_algorithm_task_stop(void);
+void tdmotc_Start(uint8_t axis,tdmotc_mode_t _mode);
+void tdmotc_Stop(uint8_t axis);
 
-void tdmotc_ResetIO(void);
+void tdmotc_ResetIO(uint8_t axis);
 
-tdmotc_mode_t tdmotc_GetMode(void);
+tdmotc_mode_t tdmotc_GetMode(uint8_t axis);
 
-bool tdmotc_GetFault(void);
-void tdmotc_ResetFault(void);
+bool tdmotc_GetFault(uint8_t axis);
+void tdmotc_ResetFault(uint8_t axis);
 
 /*Set and Get command signal*/
-void tdmotc_SetSpeedCmd(float val);
-float tdmotc_GetSpeedCmd(void);
+void tdmotc_SetSpeedCmd(uint8_t axis,float val);
+float tdmotc_GetSpeedCmd(uint8_t axis);
 
-void tdmotc_SetPosCmd2(float val);
-float tdmotc_GetPosCmd(void);
+void tdmotc_SetPosCmd2(uint8_t axis,float val);
+float tdmotc_GetPosCmd(uint8_t axis);
 
 /*Set and get parameters or signals*/
-void tdmotc_SetPID(uint8_t pid, uint8_t pid_index, float val);
-float tdmotc_GetPID(uint8_t pid, uint8_t pid_index);
-void tdmotc_SetTQBC(uint8_t index, float val);
-float tdmotc_GetTQBC(uint8_t index);
-void tdmotc_UpdateTQBC(void);
-void tdmotc_SetMotTqMaxAbs(float val);
-float tdmotc_GetMotTqMaxAbs(void);
-void tdmotc_SetAxisSMaxAbs(float val);
-float tdmotc_GetAxisSMaxAbs(void);
-float tdmotc_GetAxisSpeedAct(void);
-float tdmotc_GetMotTqActV(uint8_t index);
-bool tdmotc_GetIsStart(void);
-void tdmotc_SetPCCFG(uint8_t index, float val);
-float tdmotc_GetPCCFG(uint8_t index);
+void tdmotc_SetPID(uint8_t axis,uint8_t pid, uint8_t pid_index, float val);
+float tdmotc_GetPID(uint8_t axis,uint8_t pid, uint8_t pid_index);
+void tdmotc_SetTQBC(uint8_t axis,uint8_t index, float val);
+float tdmotc_GetTQBC(uint8_t axis,uint8_t index);
+void tdmotc_UpdateTQBC(uint8_t axis);
+void tdmotc_SetMotTqMaxAbs(uint8_t axis,float val);
+float tdmotc_GetMotTqMaxAbs(uint8_t axis);
+void tdmotc_SetAxisSMaxAbs(uint8_t axis,float val);
+float tdmotc_GetAxisSMaxAbs(uint8_t axis);
+float tdmotc_GetAxisSpeedAct(uint8_t axis);
+float tdmotc_GetMotTqActV(uint8_t axis,uint8_t index);
+bool tdmotc_GetIsStart(uint8_t axis);
+void tdmotc_SetPCCFG(uint8_t axis,uint8_t index, float val);
+float tdmotc_GetPCCFG(uint8_t axis,uint8_t index);
 
-float tdmotc_ConvCAN2Sig(int32_t input);
-int32_t tdmotc_ConvSig2CAN(float input);
+float tdmotc_ConvCAN2Sig(uint8_t axis,int32_t input);
+int32_t tdmotc_ConvSig2CAN(uint8_t axis,float input);
 
 
 #ifdef __cplusplus

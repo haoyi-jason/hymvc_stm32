@@ -58,20 +58,14 @@ static PID_CFG_T pidcfg_pos =
 /**
  * @brief  Configuration handle of speed PID.
  */
-static PID_CFG_T  pidcfg_speed[2] ={
+static PID_CFG_T  pidcfg_speed =
 {
   .cfg1 = 0,
   .kp = DMOTC_DFLT_S_PID_KP,
   .ki = DMOTC_DFLT_S_PID_KI,
   .kd = DMOTC_DFLT_S_PID_KD
-},
-{
-  .cfg1 = 0,
-  .kp = DMOTC_DFLT_S_PID_KP,
-  .ki = DMOTC_DFLT_S_PID_KI,
-  .kd = DMOTC_DFLT_S_PID_KD
-}
 };
+
 /*TQBC related*/
 static TQBC_CFG_T tqbccfg[NOF_AXES] = {{0.0f, 0.0f, 0.0f, 0.0f},{0.0f, 0.0f, 0.0f, 0.0f}}; /**< @brief  Configuration handle of torque bias calculator. */
 
@@ -85,7 +79,7 @@ static float gain_set[NOF_AXES] = {DMOTC_DFLT_GAIN,DMOTC_DFLT_GAIN};            
 static float zcp_set[NOF_AXES] = {DMOTC_DFLT_ZCP,DMOTC_DFLT_ZCP};                /**< @brief  Zero crossing point set.*/
 
 /*Position control related*/
-POSC_HANDLE_T posch[NOF_AXES];
+POSC_HANDLE_T posch;
 
 //static POSC_CMD_HANDLE_T pccmdh = DFLT_INIT_POSC_CMD_HANDLE_T(); /**< @brief  Position controller data handle.*/
 /**
@@ -108,7 +102,7 @@ static float tq_mot_v[NOF_AXES][2] = {{0.0f, 0.0f},{0.0f, 0.0f}};      /**< @bri
 static float speed_act_rpm[NOF_AXES] = {0.0f,0.0f};            /**< @brief  Axis actual speed in RPM.*/
 //static long speed_act_lsb = 0;                /**< @brief  Axis actual speed in raw format.*/
 
-static float pos_act_deg[NOF_AXES] = 0.0f;              /**< @brief  Axis actual position in degree.*/
+static float pos_act_deg = 0.0f;              /**< @brief  Axis actual position in degree.*/
 
 static float speed_cmd_rpm[NOF_AXES] = {0.0f,0.0f};            /**< @brief  Axis speed command in RPM.*/
 static float pos_cmd_deg[NOF_AXES] = {0.0f,0.0f};              /**< @brief  Axis position command in degree.*/
@@ -153,13 +147,13 @@ static THD_FUNCTION(procDMOTC ,p)
     out_min_set[pcfg->axisId] = pcfg->tqbc_boundary.out_min_set;
     gain_set[pcfg->axisId] = pcfg->tqbc_boundary.gain_set;
     zcp_set[pcfg->axisId] = pcfg->tqbc_boundary.zcp_set;
-    tq_mot_max_abs[pcfg->axisId] = pcfg->torque_max;
+    tq_mot_max_abs[pcfg->axisId] = pcfg->tqbc_cfg.out_max;
     
     //memcpy((void*)&pidcfg_speed,(void*)&pcfg->pid_cfg_speed, sizeof(pidcfg_speed));
-    pidcfg_speed[pcfg->axisId].kp = pcfg->pid_cfg_speed.kp;
-    pidcfg_speed[pcfg->axisId].ki = pcfg->pid_cfg_speed.ki;
-    pidcfg_speed[pcfg->axisId].kd = pcfg->pid_cfg_speed.kd;
-    pidcfg_speed[pcfg->axisId].cfg1 = pcfg->pid_cfg_speed.cfg1;
+    pidcfg_speed.kp = pcfg->pid_cfg_speed.kp;
+    pidcfg_speed.ki = pcfg->pid_cfg_speed.ki;
+    pidcfg_speed.kd = pcfg->pid_cfg_speed.kd;
+    pidcfg_speed.cfg1 = pcfg->pid_cfg_speed.cfg1;
   }
   else{
     chThdExit(MSG_RESET);
@@ -175,7 +169,7 @@ static THD_FUNCTION(procDMOTC ,p)
   if(dmotc_is_good[pcfg->axisId])
   {  
     if(DMOTC_MSG_OK != DMOTC_Init(&dmotch[pcfg->axisId], 
-                                  &pidcfg_speed[pcfg->axisId],
+                                  &pcfg->pidcfg_speed,
                                   &tqbccfg[pcfg->axisId],
                                   (1.0f), 
                                   (-1.0f * tq_mot_max_abs[pcfg->axisId]),
@@ -193,20 +187,13 @@ static THD_FUNCTION(procDMOTC ,p)
   }
 
   /*Init position controller to default value*/
-//  POSC_Init(&posch, 
-//             POSC_ON_THOLD_U16, 
-//             DMOTC_DFLT_POS_S_MIN, 
-//             DMOTC_DFLT_POS_S_MAX,
-//             DMOTC_DFLT_P_PID_KP,
-//             DMOTC_DFLT_P_PID_KI,
-//             DMOTC_DFLT_P_PID_KD);
-  POSC_Init(&posch[pcfg->axisId], 
+  POSC_Init(&posch, 
              POSC_ON_THOLD_U16, 
-             pcfg->tqbc_boundary.out_min_set, 
-             pcfg->tqbc_boundary.out_max_set,
-             pcfg->pid_cfg_pos.kp,
-             pcfg->pid_cfg_pos.ki,
-             pcfg->pid_cfg_pos.kd);
+             DMOTC_DFLT_POS_S_MIN, 
+             DMOTC_DFLT_POS_S_MAX,
+             DMOTC_DFLT_P_PID_KP,
+             DMOTC_DFLT_P_PID_KI,
+             DMOTC_DFLT_P_PID_KD);
 
 
   /*Start algorithm*/
@@ -221,7 +208,7 @@ static THD_FUNCTION(procDMOTC ,p)
 
     /*Run periodically*/
     /*State contol*/
-    if(start[pcfg->axisId] && dmotc_is_good[pcfg->axisId] )
+    if(start && dmotc_is_good[pcfg->axisId] )
     {
       /*Start signal detected and good*/
       if(!start_last[pcfg->axisId])
@@ -229,7 +216,7 @@ static THD_FUNCTION(procDMOTC ,p)
         /*Starting*/
         /*Restart position PID*/
         //PID_Restart(&pospid);
-        POSC_Restart(&posch[pcfg->axisId]);
+        POSC_Restart(&posch);
 
         /*Reset privite variable*/
         _priv_speeed_cmd_rpm  = 0.0f;
@@ -240,7 +227,7 @@ static THD_FUNCTION(procDMOTC ,p)
 
         /*Reinitialize and start*/
         if(DMOTC_MSG_OK != DMOTC_Init(&dmotch[pcfg->axisId], 
-                                      &pidcfg_speed[pcfg->axisId],
+                                      &pidcfg_speed,
                                       &tqbccfg[pcfg->axisId],
                                       (1.0f), 
                                       (-1.0f * tq_mot_max_abs[pcfg->axisId]), 
@@ -321,30 +308,30 @@ static THD_FUNCTION(procDMOTC ,p)
         chSysLock();
         //pccmdh.pos_cmd_u16 = tpcmdh_GetPosCmdU16();
         //pccmdh.direction_cmd = tpcmdh_GetDirection();
-        posch[pcfg->axisId].cmd.pos_cmd_u16 = tpcmdh_GetPosCmdU16(pcfg->axisId);
-        posch[pcfg->axisId].cmd.direction_cmd = tpcmdh_GetDirection(pcfg->axisId);
+        posch.cmd.pos_cmd_u16 = tpcmdh_GetPosCmdU16(pcfg->axisId);
+        posch.cmd.direction_cmd = tpcmdh_GetDirection(pcfg->axisId);
         chSysUnlock();
 
         /*Get actual value and convert*/
-        pos_act_deg[pcfg->axisId] = _GetPosDEG(pcfg->axisId);
-        _priv_pos_act_u16 = POSC_ConvertDeg2U16(pos_act_deg[pcfg->axisId]);
+        pos_act_deg = _GetPosDEG(pcfg->axisId);
+        _priv_pos_act_u16 = POSC_ConvertDeg2U16(pos_act_deg);
 
         /*Run position control algorithm*/
         //_priv_speeed_cmd_rpm = POSC_Run(&pccmdh, &pccfgh, _priv_pos_act_u16);
-        _priv_speeed_cmd_rpm =  POSC_Run(&posch[pcfg->axisId], _priv_pos_act_u16);
+        _priv_speeed_cmd_rpm =  POSC_Run(&posch, _priv_pos_act_u16);
       }
       else if(TDMOTC_MODE_P2 == mode[pcfg->axisId])
       {
         /*Position mode 2, run at fix speed to target position and stop*/
         _priv_pos_cmd = tdmotc_GetPosCmd(pcfg->axisId);
-        pos_act_deg[pcfg->axisId] = _GetPosDEG(pcfg->axisId);
+        pos_act_deg = _GetPosDEG(pcfg->axisId);
 
-        if((_priv_pos_cmd - pos_act_deg[pcfg->axisId]) > DMOTC_DFLT_POS2_THOLD)
+        if((_priv_pos_cmd - pos_act_deg) > DMOTC_DFLT_POS2_THOLD)
         {
           /*Run with positive speed*/
           _priv_speeed_cmd_rpm = DMOTC_DFLT_SPEED;
         }
-        else if((_priv_pos_cmd - pos_act_deg[pcfg->axisId]) < (-1.0f * DMOTC_DFLT_POS2_THOLD))
+        else if((_priv_pos_cmd - pos_act_deg) < (-1.0f * DMOTC_DFLT_POS2_THOLD))
         {
           /*Run with negative speed*/
           _priv_speeed_cmd_rpm = -1.0f * DMOTC_DFLT_SPEED;
@@ -366,7 +353,7 @@ static THD_FUNCTION(procDMOTC ,p)
       //speed_act_lsb = _GetSpeedLSB();
       //speed_act_rpm = ((float)speed_act_lsb * -0.1f)/200.0f; // Using modus speed
       //speed_act_rpm = (float)speed_act_lsb * 0.00381f;
-      speed_act_rpm[pcfg->axisId] = resolver_get_speed(0);
+      speed_act_rpm[pcfg->axisId] = resolver_get_speed(0)*60.f;
   
       /*Run algorithm*/
       if(DMOTC_MSG_OK != DMOTC_Run(&dmotch[pcfg->axisId],
@@ -406,8 +393,7 @@ static float _GetPosDEG(uint8_t channel)
 {
   float output = 0.0f;
   /*Implement get method and conversion here*/
-//  output = (resolver_get_position(channel) * 0.016667f);
-  output = (resolver_get_position(channel));
+  output = (resolver_get_position(channel) * 0.016667f);
   return output;
 }
 
@@ -432,12 +418,13 @@ void tdmotc_algorithm_task_init(void* config, void *config_el,uint8_t m)
       
       runTime.self = chThdCreateStatic(waDMOTC, sizeof(waDMOTC), NORMALPRIO, procDMOTC, config);
       msg_t ret = chThdSuspendS(&runTime.ref);
+      tdmotc_Start(0,mode[0]);
     }
     if(config_el != NULL){
       //tdmotc_ResetFault(AXIS_EL);
       runTime.self_el = chThdCreateStatic(waDMOTC_EL, sizeof(waDMOTC_EL), NORMALPRIO, procDMOTC, config_el);
       msg_t ret =chThdSuspendS(&runTime.ref);
-//      tdmotc_Start(1,mode[1]);
+      tdmotc_Start(1,mode[1]);
     }
   }
 }
@@ -615,7 +602,7 @@ void tdmotc_SetPID(uint8_t axis, uint8_t pid, uint8_t pid_index, float val)
         {
           val = 0.0f;
         }
-        pidcfg_speed[axis].kp = val;
+        pidcfg_speed.kp = val;
         break;
   
         case TDMOTC_PID_ID_I:
@@ -623,7 +610,7 @@ void tdmotc_SetPID(uint8_t axis, uint8_t pid, uint8_t pid_index, float val)
         {
           val = 0.0f;
         }
-        pidcfg_speed[axis].ki = val;
+        pidcfg_speed.ki = val;
         break;
   
         case TDMOTC_PID_ID_D:
@@ -631,7 +618,7 @@ void tdmotc_SetPID(uint8_t axis, uint8_t pid, uint8_t pid_index, float val)
         {
           val = 0.0f;
         }
-        pidcfg_speed[axis].kd = val;
+        pidcfg_speed.kd = val;
         break;
   
         default:
@@ -648,7 +635,7 @@ void tdmotc_SetPID(uint8_t axis, uint8_t pid, uint8_t pid_index, float val)
         {
           val = 0.0f;
         }
-        posch[axis].pid_cfg.kp = val;
+        posch.pid_cfg.kp = val;
         break;
         
         case TDMOTC_PID_ID_I:
@@ -656,7 +643,7 @@ void tdmotc_SetPID(uint8_t axis, uint8_t pid, uint8_t pid_index, float val)
         {
           val = 0.0f;
         }
-        posch[axis].pid_cfg.ki = val;
+        posch.pid_cfg.ki = val;
         break;
         
         case TDMOTC_PID_ID_D:
@@ -664,7 +651,7 @@ void tdmotc_SetPID(uint8_t axis, uint8_t pid, uint8_t pid_index, float val)
         {
           val = 0.0f;
         }
-        posch[axis].pid_cfg.kd = val;
+        posch.pid_cfg.kd = val;
         break;
         
         default:
@@ -690,15 +677,15 @@ float tdmotc_GetPID(uint8_t axis, uint8_t pid, uint8_t pid_index)
     switch (pid_index)
     {
       case TDMOTC_PID_ID_P:
-      value = pidcfg_speed[axis].kp;
+      value = pidcfg_speed.kp;
       break;
 
       case TDMOTC_PID_ID_I:
-      value = pidcfg_speed[axis].ki;
+      value = pidcfg_speed.ki;
       break;
 
       case TDMOTC_PID_ID_D:
-      value = pidcfg_speed[axis].kd;
+      value = pidcfg_speed.kd;
       break;
 
       default:
@@ -711,15 +698,15 @@ float tdmotc_GetPID(uint8_t axis, uint8_t pid, uint8_t pid_index)
     switch (pid_index)
     {
       case TDMOTC_PID_ID_P:
-      value = posch[axis].pid_cfg.kp;
+      value = posch.pid_cfg.kp;
       break;
 
       case TDMOTC_PID_ID_I:
-      value = posch[axis].pid_cfg.ki;
+      value = posch.pid_cfg.ki;
       break;
 
       case TDMOTC_PID_ID_D:
-      value = posch[axis].pid_cfg.kd;
+      value = posch.pid_cfg.kd;
       break;
 
       default:
@@ -848,7 +835,7 @@ void tdmotc_UpdateTQBC(uint8_t axis)
 {
   if(can_config[axis])
   {
-    if(DMOTC_MSG_OK == DMOTC_SetTQBCConfig(&tqbccfg[axis], out_max_2set[axis], out_min_2set[axis], gain_2set[axis], zcp_2set[axis]))
+    if(DMOTC_MSG_OK == DMOTC_SetTQBCConfig(&tqbccfg, out_max_2set[axis], out_min_2set[axis], gain_2set[axis], zcp_2set[axis]))
     {
       /*Set successfully*/
       out_max_set[axis] = out_max_2set[axis];
@@ -935,43 +922,43 @@ void tdmotc_SetPCCFG(uint8_t axis, uint8_t index, float val)
     switch (index)
     {
       case TDMOTC_PCCFG_ID_PERR_THOLD:
-      POSC_SetCfgPErrThold(&posch[axis].cfg, val);
+      POSC_SetCfgPErrThold(&posch.cfg, val);
       break;
 
       case TDMOTC_PCCFG_ID_S_CMD_MIN:
       if(val < 0.0f)
       {
-        POSC_SetCfgSCmdMin(&posch[axis].cfg, 0.0f);
+        POSC_SetCfgSCmdMin(&posch.cfg, 0.0f);
       }
       else
       {
-        POSC_SetCfgSCmdMin(&posch[axis].cfg, val);
+        POSC_SetCfgSCmdMin(&posch.cfg, val);
       }
       break;
       
       case TDMOTC_PCCFG_ID_S_CMD_MAX:
       if(val < 0.0f)
       {
-        POSC_SetCfgSCmdMax(&posch[axis].cfg, 0.0f);
+        POSC_SetCfgSCmdMax(&posch.cfg, 0.0f);
       }
       else
       {
-        POSC_SetCfgSCmdMax(&posch[axis].cfg, val);
+        POSC_SetCfgSCmdMax(&posch.cfg, val);
       }
       break;
       
       case TDMOTC_PCCFG_ID_KP:
       if(val < 0.0f)
       {
-        POSC_SetCfgKp(&posch[axis].cfg, 0.0f);
+        POSC_SetCfgKp(&posch.cfg, 0.0f);
       }
       else if( val > 1.0f)
       {
-        POSC_SetCfgKp(&posch[axis].cfg, 1.0f);
+        POSC_SetCfgKp(&posch.cfg, 1.0f);
       }
       else
       {
-        POSC_SetCfgKp(&posch[axis].cfg, val);
+        POSC_SetCfgKp(&posch.cfg, val);
       }
       break;
 
@@ -990,19 +977,19 @@ float tdmotc_GetPCCFG(uint8_t axis, uint8_t index)
   {
 
     case TDMOTC_PCCFG_ID_PERR_THOLD:
-    retval = POSC_GetCfgPErrThold(&posch[axis].cfg);
+    retval = POSC_GetCfgPErrThold(&posch.cfg);
     break;
 
     case TDMOTC_PCCFG_ID_S_CMD_MIN:
-    retval = POSC_GetCfgSCmdMin(&posch[axis].cfg);
+    retval = POSC_GetCfgSCmdMin(&posch.cfg);
     break;
     
     case TDMOTC_PCCFG_ID_S_CMD_MAX:
-    retval = POSC_GetCfgSCmdMax(&posch[axis].cfg);
+    retval = POSC_GetCfgSCmdMax(&posch.cfg);
     break;
     
     case TDMOTC_PCCFG_ID_KP:
-    retval = POSC_GetCfgKp(&posch[axis].cfg);
+    retval = POSC_GetCfgKp(&posch.cfg);
     break;
 
     default:

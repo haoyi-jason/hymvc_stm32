@@ -25,13 +25,14 @@ extern "C" {
 
 /*Functions*/
 void tpcmdh_bsemInit(void);
-void tpcmdh_taskInit(void);
+void tpcmdh_taskInit(void *, void *);
+void tpcmdh_taskStop();
 
 /*Set and get functions*/
-void tpcmdh_SetPosCmd(float val);
-float tpcmdh_GetPosCmd(void);
-pos_u16t tpcmdh_GetPosCmdU16(void);
-bool tpcmdh_GetDirection(void);
+void tpcmdh_SetPosCmd(uint8_t axis, float val);
+float tpcmdh_GetPosCmd(uint8_t axis);
+pos_u16t tpcmdh_GetPosCmdU16(uint8_t axis);
+bool tpcmdh_GetDirection(uint8_t axis);
 void tpcmdh_GetCommand(POSC_CMD_HANDLE_T *p_handle_out);
 bool tpcmdh_CmdIsAvailable();
 

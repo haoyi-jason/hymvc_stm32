@@ -3,12 +3,14 @@
 #include "task_resolver.h"
 #include "ad2s_drv.h"
 #include "ylib/numeric/filters/iir.h"
+#include "app_config.h"
 
 #define EV_UPDATE   EVENT_MASK(0)
 #define EV_PERIODIC     EVENT_MASK(1)
 
 struct runTime{
   thread_t *self;
+  thread_t *main;
   //AD2S1210Driver **ad2s_dev;
   AD2S1210Driver *ad2s_dev;
   AD2S1210Driver *ad2s_dev2;
@@ -25,7 +27,7 @@ static const SPIConfig spicfg_ad2s_dev0 = {
   NULL,
   NULL,
   NULL,
-  SPI_CR1_BR_1 | SPI_CR1_CPOL
+  SPI_CR1_BR_2  |  SPI_CR1_CPHA
 };
 
 static AD2S1210Config ad2s_config_dev0 = {
@@ -88,7 +90,7 @@ static void ad2s_to(void *arg)
 {
   chSysLockFromISR();
   chEvtSignalI(runTime.self,EV_PERIODIC);
-  chVTSetI(&runTime.vtResolver, TIME_MS2I(10),ad2s_to,NULL);
+  chVTSetI(&runTime.vtResolver, TIME_MS2I(1),ad2s_to,NULL);
   chSysUnlockFromISR();
 }
 
@@ -101,7 +103,7 @@ static THD_FUNCTION(procAD2S ,p)
   ad2S_init(runTime.ad2s_dev2,&ad2s_config_dev1);
   ad2S_start(runTime.ad2s_dev2);
   chVTObjectInit(&runTime.vtResolver);
-  chVTSet(&runTime.vtResolver,TIME_MS2I(10),ad2s_to,NULL);
+  chVTSet(&runTime.vtResolver,TIME_MS2I(1),ad2s_to,NULL);
 
   ad2s_SetResolution(runTime.ad2s_dev,RES_16b);
   ad2s_reset(runTime.ad2s_dev);
@@ -128,14 +130,22 @@ static THD_FUNCTION(procAD2S ,p)
       ad2S_Refresh(runTime.ad2s_dev2);
       iir_insert_f(&runTime.speed[0],runTime.ad2s_dev->currentSpeed);
       iir_insert_f(&runTime.speed[1],runTime.ad2s_dev2->currentSpeed);
-      iir_insert_circular_f(&runTime.position[0],runTime.ad2s_dev->currentAngle/60.);
-      iir_insert_circular_f(&runTime.position[1],runTime.ad2s_dev2->currentAngle/60.);
+//      iir_insert_circular_f(&runTime.position[0],runTime.ad2s_dev->currentAngle/60.);
+//      iir_insert_circular_f(&runTime.position[1],runTime.ad2s_dev2->currentAngle/60.);
+      iir_insert_circular_f(&runTime.position[0],runTime.ad2s_dev->currentAngleRad);
+      iir_insert_circular_f(&runTime.position[1],runTime.ad2s_dev2->currentAngleRad);
       
       iir_insert(&runTime.position_u[0],(int32_t)runTime.ad2s_dev->position);
       iir_insert(&runTime.position_u[1],(int32_t)runTime.ad2s_dev2->position);
+      if(runTime.main != NULL){
+        chEvtSignal(runTime.main, EV_RESOLVER_ACQUIRED);
+      }
     }
     
   }
+  
+  chVTReset(&runTime.vtResolver);
+  chThdExit(MSG_OK);
 }
 
 void resolver_task_init()
@@ -144,7 +154,17 @@ void resolver_task_init()
   runTime.ad2s_dev = (ad2s1210);
   runTime.ad2s_dev2 = &ad2s1210[1];
   resolverRuntime = &runTime;
+  runTime.main = chRegFindThreadByName("MAIN");
   runTime.self = chThdCreateStatic(waAD2S,sizeof(waAD2S),NORMALPRIO,procAD2S,NULL);
+}
+
+void resolver_task_stop()
+{
+  if(runTime.self != NULL){
+    chThdTerminate(runTime.self);
+    chThdWait(runTime.self);
+    runTime.self = NULL;
+  }
 }
 
 float resolver_get_speed(uint8_t id)
@@ -160,7 +180,7 @@ float resolver_get_position(uint8_t id)
 {
   if(id < 2){
     //return ad2s1210[id].currentAngle; 
-    return runTime.position[id].last*60;
+    return runTime.position[id].last;
   }
   return 0;
 }
@@ -179,4 +199,11 @@ uint16_t resolver_get_position_raw(uint8_t id)
     return (uint16_t)runTime.position_u[id].last;
   }
   return 0;
+}
+
+uint8_t lastError(uint8_t id)
+{
+  if(id < 2){
+    return ad2s1210[id].fault;
+  }
 }

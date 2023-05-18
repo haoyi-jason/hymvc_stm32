@@ -3,6 +3,7 @@
 
 #include "hal.h"
 
+#define AD76_NOF_CHANNEL        8
 
 typedef struct AD7606Driver AD7606Driver;
 
@@ -39,7 +40,7 @@ typedef struct{
 #define _ad7606_data \
   uint8_t chipID; \
   event_source_t ev_drdy; \
-  int32_t data[8];
+  int32_t data[AD76_NOF_CHANNEL];
   
 struct AD7606Driver{
   AD7606Config *config;

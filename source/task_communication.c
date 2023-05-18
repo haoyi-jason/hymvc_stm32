@@ -12,6 +12,8 @@
 #include "task_dual_motor_ctrl.h"
 #include "task_pos_cmd_handler.h"
 
+#include "shell.h"
+
 int8_t config_handler(CANRxFrame *prx,CANTxFrame *ptx);
 int8_t id_handler(CANRxFrame *prx,CANTxFrame *ptx);
 int8_t digital_input_handler(CANRxFrame *prx,CANTxFrame *ptx);
@@ -80,7 +82,14 @@ static CANConfig canCfg250K = {
 
 static struct runTime runTime, *commRuntime;
 static struct _nvmParam nvmParam, *commNvmParam;
+static THD_WORKING_AREA(waShell, 1024);
 
+static void cmd_report(BaseSequentialStream *chp, int argc, char *argv[]); 
+
+static const ShellCommand commands[] = {
+  {"report", cmd_report},
+  {NULL, NULL}
+};
 
 static void save_nvmParam()
 {
@@ -364,6 +373,13 @@ static THD_FUNCTION(procCANRx,p){
   }
 }       
 
+static SerialConfig serialCfg = {
+  9600
+};
+static const ShellConfig shell_cfg = {
+  (BaseSequentialStream *)&SD4,
+  commands
+};
 void task_communication_init(void)
 {
   analog_input_task_init();
@@ -371,10 +387,14 @@ void task_communication_init(void)
   resolver_task_init();
   //modbus_master_task_init();
   //digital_init();
-//  canStart(&CAND1,&canCfg250K);
+  canStart(&CAND2,&canCfg250K);
   at24eep_init(&I2CD2,32,1024,0x50,2);
+
+  sdStart(&SD2,&serialCfg);
+  chThdCreateStatic(waShell, sizeof(waShell), NORMALPRIO, shellThread, (void *)&shell_cfg);
+
   commRuntime = &runTime;
-  runTime.self = chThdCreateStatic(waCANRX, sizeof(waCANRX), NORMALPRIO, procCANRx, &CAND1);
+  runTime.self = chThdCreateStatic(waCANRX, sizeof(waCANRX), NORMALPRIO, procCANRx, &CAND2);
 }
 
 int8_t config_handler(CANRxFrame *prx,CANTxFrame *ptx)
@@ -680,3 +700,6 @@ int8_t pid_request(CANRxFrame *prx,CANTxFrame *ptx)
   
 }
 
+static void cmd_report(BaseSequentialStream *chp, int argc, char *argv[]) 
+{
+}

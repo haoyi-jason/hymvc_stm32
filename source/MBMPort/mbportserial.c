@@ -224,7 +224,7 @@ eMBPSerialInit( xMBPSerialHandle * pxSerialHdl, UCHAR ucPort, ULONG ulBaudRate,
         
         if(eStatus != MB_EINVAL){
           xSerialHdls[0].uartConfig = &uartCfg;
-          xSerialHdls[0].dev = &UARTD1;
+          xSerialHdls[0].dev = &UARTD6;
           xSerialHdls[0].xMBMHdl = xMBMHdl;
           *pxSerialHdl = &xSerialHdls[0];
           uartCfg.speed = ulBaudRate;

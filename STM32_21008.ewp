@@ -121,11 +121,11 @@
                 </option>
                 <option>
                     <name>OGUseCmsis</name>
-                    <state>0</state>
+                    <state>1</state>
                 </option>
                 <option>
                     <name>OGUseCmsisDspLib</name>
-                    <state>0</state>
+                    <state>1</state>
                 </option>
                 <option>
                     <name>GRuntimeLibThreads</name>
@@ -220,7 +220,7 @@
                 <debug>1</debug>
                 <option>
                     <name>CCDefines</name>
-                    <state></state>
+                    <state>CHPRINTF_USE_FLOAT</state>
                 </option>
                 <option>
                     <name>CCPreprocFile</name>
@@ -368,6 +368,7 @@
                     <state>D:\SourceRespo\ChibiOS\chibios203\os\rt\include</state>
                     <state>D:\SourceRespo\ChibiOS\chibios203\os\oslib\include</state>
                     <state>D:\SourceRespo\ChibiOS\chibios203\os\various\</state>
+                    <state>D:\SourceRespo\ChibiOS\chibios203\os\various\shell</state>
                     <state>D:\SourceRespo\ChibiOS\chibios203\os\various\cpp_wrappers</state>
                     <state>D:\SourceRespo\ChibiOS\chibios203\os\various\fatfs_bindings</state>
                     <state>D:\SourceRespo\ChibiOS\chibios203\os\hal\ports\STM32\LLD\ADCv2</state>
@@ -397,6 +398,9 @@
                     <state>$PROJ_DIR$\source\MBMPort</state>
                     <state>D:\SourceRespo\IAR_SRC_WS\hymvc_stm32\source\dual_motor_ctrl</state>
                     <state>D:\SourceRespo\</state>
+                    <state>$PROJ_DIR$\source\CANopenNode</state>
+                    <state>$PROJ_DIR$\source\CO_Port</state>
+                    <state>D:\SourceRespo\ARM_LIBS\CMSIS_5-5.6.0\CMSIS\DSP\Include</state>
                 </option>
                 <option>
                     <name>CCStdIncCheck</name>
@@ -455,7 +459,7 @@
                 </option>
                 <option>
                     <name>IccAllowVLA</name>
-                    <state>0</state>
+                    <state>1</state>
                 </option>
                 <option>
                     <name>IccStaticDestr</name>
@@ -702,7 +706,7 @@
                 </option>
                 <option>
                     <name>OCOutputOverride</name>
-                    <state>0</state>
+                    <state>1</state>
                 </option>
                 <option>
                     <name>OOCOutputFile</name>
@@ -714,7 +718,7 @@
                 </option>
                 <option>
                     <name>OOCObjCopyEnable</name>
-                    <state>1</state>
+                    <state>0</state>
                 </option>
             </data>
         </settings>
@@ -18023,6 +18027,9 @@
     <group>
         <name>Config</name>
         <file>
+            <name>$PROJ_DIR$\source\app_config.h</name>
+        </file>
+        <file>
             <name>$PROJ_DIR$\cfg\chconf.h</name>
         </file>
         <file>
@@ -18077,6 +18084,159 @@
     <group>
         <name>source</name>
         <group>
+            <name>CO</name>
+            <group>
+                <name>Port</name>
+                <file>
+                    <name>$PROJ_DIR$\source\CO_Port\CO_driver_blank.c</name>
+                </file>
+                <file>
+                    <name>$PROJ_DIR$\source\CO_Port\CO_driver_target.h</name>
+                </file>
+                <file>
+                    <name>$PROJ_DIR$\source\CO_Port\CO_storageBlank.c</name>
+                </file>
+                <file>
+                    <name>$PROJ_DIR$\source\CO_Port\CO_storageBlank.h</name>
+                </file>
+                <file>
+                    <name>$PROJ_DIR$\source\CO_Port\OD.c</name>
+                </file>
+                <file>
+                    <name>$PROJ_DIR$\source\CO_Port\OD.h</name>
+                </file>
+            </group>
+            <group>
+                <name>Stack</name>
+                <group>
+                    <name>301</name>
+                    <file>
+                        <name>$PROJ_DIR$\source\CANopenNode\301\CO_config.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\source\CANopenNode\301\CO_driver.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\source\CANopenNode\301\CO_Emergency.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\source\CANopenNode\301\CO_Emergency.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\source\CANopenNode\301\CO_fifo.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\source\CANopenNode\301\CO_fifo.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\source\CANopenNode\301\CO_HBconsumer.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\source\CANopenNode\301\CO_HBconsumer.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\source\CANopenNode\301\CO_NMT_Heartbeat.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\source\CANopenNode\301\CO_NMT_Heartbeat.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\source\CANopenNode\301\CO_ODinterface.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\source\CANopenNode\301\CO_ODinterface.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\source\CANopenNode\301\CO_PDO.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\source\CANopenNode\301\CO_PDO.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\source\CANopenNode\301\CO_SDOclient.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\source\CANopenNode\301\CO_SDOclient.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\source\CANopenNode\301\CO_SDOserver.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\source\CANopenNode\301\CO_SDOserver.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\source\CANopenNode\301\CO_SYNC.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\source\CANopenNode\301\CO_SYNC.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\source\CANopenNode\301\CO_TIME.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\source\CANopenNode\301\CO_TIME.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\source\CANopenNode\301\crc16-ccitt.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\source\CANopenNode\301\crc16-ccitt.h</name>
+                    </file>
+                </group>
+                <group>
+                    <name>303</name>
+                    <file>
+                        <name>$PROJ_DIR$\source\CANopenNode\303\CO_LEDs.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\source\CANopenNode\303\CO_LEDs.h</name>
+                    </file>
+                </group>
+                <group>
+                    <name>305</name>
+                    <file>
+                        <name>$PROJ_DIR$\source\CANopenNode\305\CO_LSS.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\source\CANopenNode\305\CO_LSSmaster.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\source\CANopenNode\305\CO_LSSmaster.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\source\CANopenNode\305\CO_LSSslave.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\source\CANopenNode\305\CO_LSSslave.h</name>
+                    </file>
+                </group>
+                <group>
+                    <name>storage</name>
+                    <file>
+                        <name>$PROJ_DIR$\source\CANopenNode\storage\CO_eeprom.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\source\CANopenNode\storage\CO_storage.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\source\CANopenNode\storage\co_storage.h</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\source\CANopenNode\storage\CO_storageEeprom.c</name>
+                    </file>
+                    <file>
+                        <name>$PROJ_DIR$\source\CANopenNode\storage\co_storageEeprom.h</name>
+                    </file>
+                </group>
+                <file>
+                    <name>$PROJ_DIR$\source\CANopenNode\CANopen.c</name>
+                </file>
+                <file>
+                    <name>$PROJ_DIR$\source\CANopenNode\CANopen.h</name>
+                </file>
+            </group>
+        </group>
+        <group>
             <name>dual_motor_controller</name>
             <group>
                 <name>task</name>
@@ -18120,6 +18280,9 @@
         </group>
         <group>
             <name>FreeModbus</name>
+            <excluded>
+                <configuration>Debug</configuration>
+            </excluded>
             <group>
                 <name>Master_v296</name>
                 <group>
@@ -18339,6 +18502,9 @@
         </group>
         <group>
             <name>MBM_Port</name>
+            <excluded>
+                <configuration>Debug</configuration>
+            </excluded>
             <file>
                 <name>$PROJ_DIR$\source\MBMPort\mbmconfig.h</name>
             </file>
@@ -18359,6 +18525,15 @@
             </file>
         </group>
         <group>
+            <name>PID</name>
+            <file>
+                <name>$PROJ_DIR$\source\PID\nested_pid.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\source\PID\nested_pid.h</name>
+            </file>
+        </group>
+        <group>
             <name>Position_Control</name>
             <file>
                 <name>$PROJ_DIR$\source\pos_ctrl.c</name>
@@ -18375,6 +18550,9 @@
         </group>
         <file>
             <name>$PROJ_DIR$\source\can_frame_handler.c</name>
+            <excluded>
+                <configuration>Debug</configuration>
+            </excluded>
         </file>
         <file>
             <name>$PROJ_DIR$\source\can_frame_handler.h</name>
@@ -18389,16 +18567,43 @@
             <name>$PROJ_DIR$\source\task_analog_input.c</name>
         </file>
         <file>
+            <name>$PROJ_DIR$\source\task_analog_input.h</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\source\task_canopen.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\source\task_canopen.h</name>
+        </file>
+        <file>
             <name>$PROJ_DIR$\source\task_communication.c</name>
+            <excluded>
+                <configuration>Debug</configuration>
+            </excluded>
         </file>
         <file>
             <name>$PROJ_DIR$\source\task_dac.c</name>
         </file>
         <file>
+            <name>$PROJ_DIR$\source\task_dac.h</name>
+        </file>
+        <file>
             <name>$PROJ_DIR$\source\task_mbmaster.c</name>
+            <excluded>
+                <configuration>Debug</configuration>
+            </excluded>
         </file>
         <file>
             <name>$PROJ_DIR$\source\task_resolver.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\source\task_resolver.h</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\source\task_systemValid.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\source\task_systemvalid.h</name>
         </file>
     </group>
 </project>

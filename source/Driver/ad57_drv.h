@@ -55,11 +55,11 @@ typedef struct{
 
 #define _ad57_data \
         uint8_t chip_id; \
-        uint16_t data[AD57_CHANNELS]; \
-        uint16_t corse_gain[AD57_CHANNELS]; \
-        uint16_t fine_gain[AD57_CHANNELS]; \
-        uint16_t offset[AD57_CHANNELS]; \
-        uint16_t chipTemp; \
+        int16_t data[AD57_CHANNELS]; \
+        int16_t corse_gain[AD57_CHANNELS]; \
+        int16_t fine_gain[AD57_CHANNELS]; \
+        int16_t offset[AD57_CHANNELS]; \
+        int16_t chipTemp; \
         uint8_t syncUpdate;
         
 struct AD57x4Driver{

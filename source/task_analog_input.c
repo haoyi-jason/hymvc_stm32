@@ -2,17 +2,21 @@
 #include "hal.h"
 #include "task_analog_input.h"
 #include "ad76_drv.h"
+#include "app_config.h"
 
 #define EV_AD7606_RDY   EVENT_MASK(10)
 #define EV_AD7606_ACQ   EVENT_MASK(11)
 
+#define LSB     20/65536
+
 struct runTime{
   thread_t *thd_ad7606;
-  thread_t *thd_ad2s;
+  thread_t *main;
   AD7606Driver *ad7606;
   event_listener_t el_ad7606;
   virtual_timer_t vt7606;
   uint16_t sampleIntervalms;
+  float convertedData[AD76_NOF_CHANNEL];
 };
 
 static struct runTime runTime, *analogRuntime;
@@ -81,13 +85,20 @@ static THD_FUNCTION(procAD7606 ,p)
     evt = chEvtWaitAny(ALL_EVENTS);
     if(evt & EV_AD7606_RDY){
       ad7606_read_conversion(runTime.ad7606,2);
+      for(uint8_t i=0;i<AD76_NOF_CHANNEL;i++){
+        runTime.convertedData[i] = runTime.ad7606->data[i] * LSB;
+      }
+      if(runTime.main != NULL){
+        chEvtSignal(runTime.main, EV_ADC_ACQUIRED);
+      }
     }
     if(evt & EV_AD7606_ACQ){
       ad7606_start_conv(runTime.ad7606,3);
     }
   }
   
-  
+  chVTReset(&runTime.vt7606);
+  chThdExit(MSG_OK);
 }
 
 void analog_input_task_init()
@@ -95,7 +106,16 @@ void analog_input_task_init()
   runTime.ad7606 = &ad7606;
   runTime.sampleIntervalms = 10;
   analogRuntime = &runTime;
+  runTime.main = chRegFindThreadByName("MAIN");
   runTime.thd_ad7606 = chThdCreateStatic(waAD7606,sizeof(waAD7606),NORMALPRIO,procAD7606,NULL);
+}
+
+void analog_input_task_stop()
+{
+  if(runTime.thd_ad7606 != NULL){
+    chThdTerminate(runTime.thd_ad7606);
+    chThdWait(runTime.thd_ad7606);
+  }  
 }
 
 int8_t analog_input_read(uint8_t channel, int32_t *data)
@@ -106,6 +126,21 @@ int8_t analog_input_read(uint8_t channel, int32_t *data)
   }
   else if(channel < 8){
     *data = ad7606.data[channel];
+  }
+  else{
+    ret = -1;
+  }
+  return ret;
+}
+
+int8_t analog_input_readf(uint8_t channel, float *data)
+{
+  int8_t ret = 0;
+  if(channel == 0xff){
+    memcpy(data,runTime.convertedData,32);
+  }
+  else if(channel < 8){
+    *data = runTime.convertedData[channel];
   }
   else{
     ret = -1;
