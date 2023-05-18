@@ -1175,12 +1175,14 @@ static THD_FUNCTION(procApp,p)
     if(evt & EV_RESOLVER_ACQUIRED){
       float fv;
       od = OD_find(OD,0x6064);
-      fv = resolver_get_position(0);
+      fv = (resolver_get_position(0));
+      if(fv < 0) fv += PIMUL2;
+      fv *= RAD2DEG;
       OD_set_f32(od,1,fv,true);
       fv = resolver_get_speed(0);
       OD_set_f32(od,2,fv,true);
       
-      fv = resolver_get_position(1);
+      fv = resolver_get_position(1)*RAD2DEG;
       OD_set_f32(od,3,fv,true);
       fv = resolver_get_speed(1);
       OD_set_f32(od,4,fv,true);
