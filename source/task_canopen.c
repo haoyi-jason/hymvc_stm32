@@ -31,12 +31,11 @@ description:
 #include "ad57_drv.h"
 #include "digital_io.h"
 
-#include "task_systemvalid.h"
 #include "shell.h"
 #include "chprintf.h"
 
 #include "pid/nested_pid.h"
-
+#include "pid/stow_control.h"
 
 static void cmd_report(BaseSequentialStream *chp, int argc, char *argv[]); 
 static void cmd_log(BaseSequentialStream *chp, int argc, char *argv[]); 
@@ -158,11 +157,13 @@ typedef struct{
   uint32_t mcStatus;
   uint16_t stowCommand;
   uint8_t stowValidState;
-  _stow_control_t stowControl;
+//  _stow_control_t stowControl;
   bool localLog;
   uint32_t logIntervalMs;
   virtual_timer_t vtLog;
-  _nested_pid_t pidConfig[2];
+  _nested_pid_t pidConfig[NOF_AXES];
+  _stow_config_t stowConfig[NOF_AXES];
+  uint8_t activeStowAxis;
 }_runTime_t;
 
 static _runTime_t runTime, *pCORunTime;
@@ -251,27 +252,27 @@ static ODR_t OD_Control_Input_6040(OD_stream_t *stream, const void *buf, OD_size
     else if(stream->subIndex == 0x02){
       uint16_t v = CO_getUint16(buf);
       uint16_t msk = v & 0x03;
-      if(v == 0x01){
-        runTime.stowCommand = ACT_UNLOCK;
+      if(v == 0x10){
+        runTime.stowCommand = STOW_GO_UNLOCK;
         chSysLock();
         chEvtSignal(runTime.appThread,EV_AZ_STOW_LOCK);
         chSysUnlock();
       }
-      else if(v == 0x02){
-        runTime.stowCommand = ACT_LOCK;
+      else if(v == 0x11){
+        runTime.stowCommand = STOW_GO_LOCK;
         chSysLock();
         chEvtSignal(runTime.appThread,EV_AZ_STOW_LOCK);
         chSysUnlock();
       }
       msk = v & 0x0C;
-      if(v == 0x04){
-        runTime.stowCommand = ACT_UNLOCK;
+      if(v == 0x020){
+        runTime.stowCommand = STOW_GO_UNLOCK;
         chSysLock();
         chEvtSignal(runTime.appThread,EV_EL_STOW_LOCK);
         chSysUnlock();
       }
-      else if(v == 0x08){
-        runTime.stowCommand = ACT_LOCK;
+      else if(v == 0x21){
+        runTime.stowCommand = STOW_GO_LOCK;
         chSysLock();
         chEvtSignal(runTime.appThread,EV_EL_STOW_LOCK);
         chSysUnlock();
@@ -511,7 +512,7 @@ static void updateStatus(uint8_t mask, bool set)
     if(sta != runTime.mcStatus){
       runTime.mcStatus = sta;
       od_set_status(runTime.mcStatus);
-      OD_requestTPDO(runTime.cosFlags.statusFlag,1);
+      OD_requestTPDO(runTime.cosFlags.statusFlag,0);
     }
   
 }
@@ -594,8 +595,10 @@ static void load_pid_param_dummy()
 static void load_pid_param_ex()
 {
   _nested_pid_t *pid;
+  _stow_config_t *stow;
 #ifdef OD_ENTRY_H60A0
   pid = &runTime.pidConfig[0];
+  stow = &runTime.stowConfig[0];
   OD_get_f32(OD_ENTRY_H60A0,0x04,&pid->pos.param.kp,true);
   OD_get_f32(OD_ENTRY_H60A0,0x05,&pid->pos.param.ki,true);
   OD_get_f32(OD_ENTRY_H60A0,0x06,&pid->pos.param.kd,true);
@@ -609,6 +612,9 @@ static void load_pid_param_ex()
   pid->pos.input_range.min *= DEG2RAD;
   pid->pos.input_range.max *= DEG2RAD;
   pid->pos.input_range.offset *= DEG2RAD;
+  pid->pos.input_range.min -= PI;
+  pid->pos.input_range.max -= PI;
+  pid->pos.input_range.offset -= PI;
   
 
   OD_get_f32(OD_ENTRY_H60A0,0x07,&pid->spd.param.kp,true);
@@ -650,6 +656,15 @@ static void load_pid_param_ex()
     OD_get_u8(OD_ENTRY_H2005,0x03,&pid->controlMap.servo_en[1],true);
     OD_get_u8(OD_ENTRY_H2005,0x04,&pid->controlMap.servo_on[1],true);
     OD_get_u8(OD_ENTRY_H2005,0x10,&pid->controlMap.controlMode,true);
+    OD_get_u8(OD_ENTRY_H2005,0x09,&stow->lock_control,true);
+    OD_get_u8(OD_ENTRY_H2005,0x0A,&stow->unlock_control,true);
+#endif
+    
+#ifdef OD_ENTRY_H2006
+    OD_get_u8(OD_ENTRY_H2006,0x01,&stow->lock_sense,true);
+    OD_get_u8(OD_ENTRY_H2006,0x02,&stow->unlock_sense,true);
+    OD_get_u8(OD_ENTRY_H2006,0x05,&pid->controlMap.servo_rdy[0],true);
+    OD_get_u8(OD_ENTRY_H2006,0x06,&pid->controlMap.servo_rdy[1],true);
 #endif
     
 #ifdef OD_ENTRY_H2007
@@ -668,11 +683,17 @@ static void load_pid_param_ex()
     pid->joystickMode = false;
     pid->stream = (BaseSequentialStream*)&CONSOLE;
     pid->axisId = AXIS_AZ;
+
+#ifdef OD_ENTRY_H6000
+    OD_get_u32(OD_ENTRY_H6000,0x03,&stow->cycle_time_ms,true);
+    OD_get_u32(OD_ENTRY_H6000,0x04,&stow->timeout_ms,true);
+#endif
     
 #endif
 
-  pid = &runTime.pidConfig[1];
 #ifdef OD_ENTRY_H60A1
+  pid = &runTime.pidConfig[1];
+  stow = &runTime.stowConfig[1];
   OD_get_f32(OD_ENTRY_H60A1,0x04,&pid->pos.param.kp,true);
   OD_get_f32(OD_ENTRY_H60A1,0x05,&pid->pos.param.ki,true);
   OD_get_f32(OD_ENTRY_H60A1,0x06,&pid->pos.param.kd,true);
@@ -727,6 +748,14 @@ static void load_pid_param_ex()
     OD_get_u8(OD_ENTRY_H2005,0x07,&pid->controlMap.servo_en[1],true);
     OD_get_u8(OD_ENTRY_H2005,0x08,&pid->controlMap.servo_on[1],true);
     OD_get_u8(OD_ENTRY_H2005,0x11,&pid->controlMap.controlMode,true);
+    OD_get_u8(OD_ENTRY_H2005,0x0B,&stow->lock_control,true);
+    OD_get_u8(OD_ENTRY_H2005,0x0C,&stow->unlock_control,true);
+#endif
+#ifdef OD_ENTRY_H2006
+    OD_get_u8(OD_ENTRY_H2006,0x03,&stow->lock_sense,true);
+    OD_get_u8(OD_ENTRY_H2006,0x04,&stow->unlock_sense,true);
+    OD_get_u8(OD_ENTRY_H2006,0x07,&pid->controlMap.servo_rdy[0],true);
+    OD_get_u8(OD_ENTRY_H2006,0x08,&pid->controlMap.servo_rdy[1],true);
 #endif
     
 #ifdef OD_ENTRY_H2007
@@ -746,7 +775,13 @@ static void load_pid_param_ex()
     pid->stream = (BaseSequentialStream*)&CONSOLE;
     pid->axisId = AXIS_EL;
 
+#ifdef OD_ENTRY_H6000
+    OD_get_u32(OD_ENTRY_H6000,0x03,&stow->cycle_time_ms,true);
+    OD_get_u32(OD_ENTRY_H6000,0x04,&stow->timeout_ms,true);
 #endif
+
+#endif
+    
 
   
 }
@@ -1062,7 +1097,7 @@ void load_app_param()
 //    runTime.pidEL.stowState = STOW_UNLOCKED;
     
     runTime.pidAutoStart = true;
-
+    runTime.activeStowAxis = 0xff;
 }
 
 static THD_WORKING_AREA(waApp, 512);
@@ -1123,7 +1158,7 @@ static THD_FUNCTION(procApp,p)
   
   chVTObjectInit(&runTime.vtLog);
   od_set_status(runTime.mcStatus);
-  OD_requestTPDO(runTime.cosFlags.statusFlag,1);
+  OD_requestTPDO(runTime.cosFlags.statusFlag,0);
   
   while(!_stop)
   {
@@ -1132,26 +1167,26 @@ static THD_FUNCTION(procApp,p)
     }
     
     // update OD
-    uint8_t sta = stow_state();
-    if(sta != 0){
-      //uint8_t state = stow_state();
-      if(runTime.stowControl.axisId == AXIS_AZ){
-        if(sta < 4){
-          updateStatus(STA_MC_AZ_STOW_LOCK_IN_PROGRESS,1);
-        }
-        else{
-          updateStatus(STA_MC_AZ_STOW_UNLOCK_IN_PROGRESS,1);
-        }
-      }
-      else if(runTime.stowControl.axisId == AXIS_EL){
-        if(sta < 4){
-          updateStatus(STA_MC_EL_STOW_LOCK_IN_PROGRESS,1);
-        }
-        else{
-          updateStatus(STA_MC_EL_STOW_UNLOCK_IN_PROGRESS,1);
-        }
-      }
-    }
+//    uint8_t sta = stow_state();
+//    if(sta != 0){
+//      //uint8_t state = stow_state();
+//      if(runTime.stowControl.axisId == AXIS_AZ){
+//        if(sta < 4){
+//          updateStatus(STA_MC_AZ_STOW_LOCK_IN_PROGRESS,1);
+//        }
+//        else{
+//          updateStatus(STA_MC_AZ_STOW_UNLOCK_IN_PROGRESS,1);
+//        }
+//      }
+//      else if(runTime.stowControl.axisId == AXIS_EL){
+//        if(sta < 4){
+//          updateStatus(STA_MC_EL_STOW_LOCK_IN_PROGRESS,1);
+//        }
+//        else{
+//          updateStatus(STA_MC_EL_STOW_UNLOCK_IN_PROGRESS,1);
+//        }
+//      }
+//    }
     
     eventmask_t evt = chEvtWaitAnyTimeout(ALL_EVENTS, TIME_MS2I(10));
     if(evt & EV_ADC_ACQUIRED){
@@ -1230,55 +1265,95 @@ static THD_FUNCTION(procApp,p)
       digital_get_iso_inw(0,&u16);
       OD_set_u16(od,1,u16,true);
       OD_requestTPDO(runTime.cosFlags.diFlag,1);
+      
+      if((1 << runTime.stowConfig[0].lock_sense) & u16){
+        updateStatus(STA_MC_AZ_STOW_LOCKD,1);
+      }
+      else{
+        updateStatus(STA_MC_AZ_STOW_LOCKD,0);
+      }
+      if((1 << runTime.stowConfig[0].unlock_sense) & u16){
+        updateStatus(STA_MC_AZ_STOW_UNLOCKD,1);
+      }
+      else{
+        updateStatus(STA_MC_AZ_STOW_UNLOCKD,0);
+      }
+
+      if((1 << runTime.stowConfig[1].lock_sense) & u16){
+        updateStatus(STA_MC_EL_STOW_LOCKD,1);
+      }
+      else{
+        updateStatus(STA_MC_EL_STOW_LOCKD,0);
+      }
+      if((1 << runTime.stowConfig[1].unlock_sense) & u16){
+        updateStatus(STA_MC_EL_STOW_UNLOCKD,1);
+      }
+      else{
+        updateStatus(STA_MC_EL_STOW_UNLOCKD,0);
+      }
     }
     
     if(evt & EV_AZ_STOW_LOCK){
-      runTime.stowControl.axisId = runTime.pidAZ.axisId;
-      validStow(runTime.stowCommand,&runTime.stowControl);
+      //runTime.stowControl.axisId = runTime.pidAZ.axisId;
+      //validStow(runTime.stowCommand,&runTime.stowControl);
+      load_pid_param_ex();
+      runTime.activeStowAxis = AXIS_AZ;
+      runTime.stowConfig[0].activity = runTime.stowCommand;
+      if(runTime.stowCommand == STOW_GO_LOCK){
+        updateStatus(STA_MC_AZ_STOW_LOCK_IN_PROGRESS,1);
+      }
+      else if(runTime.stowCommand == STOW_GO_UNLOCK){
+        updateStatus(STA_MC_AZ_STOW_UNLOCK_IN_PROGRESS,1);
+      }
+      stow_control_start(&runTime.stowConfig[0]);
     }
        
     if(evt & EV_EL_STOW_LOCK){
-      runTime.stowControl.axisId = runTime.pidEL.axisId;
-      validStow(runTime.stowCommand,&runTime.stowControl);
+//      runTime.stowControl.axisId = runTime.pidEL.axisId;
+      //validStow(runTime.stowCommand,&runTime.stowControl);
+      load_pid_param_ex();
+      runTime.activeStowAxis = AXIS_EL;
+      runTime.stowConfig[1].activity = runTime.stowCommand;
+      if(runTime.stowCommand == STOW_GO_LOCK){
+        updateStatus(STA_MC_EL_STOW_LOCK_IN_PROGRESS,1);
+      }
+      else if(runTime.stowCommand == STOW_GO_UNLOCK){
+        updateStatus(STA_MC_EL_STOW_UNLOCK_IN_PROGRESS,1);
+      }
+      stow_control_start(&runTime.stowConfig[1]);
     }
     
     if(evt & EV_STOW_ACTION_DONE){
       //sysValidStow(runTime.stowCommand,&runTime.pidAZ);
-      runTime.stowValidState = 0;
-      if(runTime.stowControl.axisId == AXIS_AZ){
-        if(runTime.stowControl.stowStatus == STA_MC_AZ_STOW_LOCKD){
-          runTime.pidAZ.stowState = STOW_LOCKED;
-        }
-        else if(runTime.stowControl.stowStatus == STA_MC_AZ_STOW_UNLOCKD){
-          runTime.pidAZ.stowState = STOW_UNLOCKED;
-        }
-        else{
-          runTime.pidAZ.stowState = STOW_UNKNOW;
-        }        
+      //runTime.stowValidState = 0;
+      if(runTime.activeStowAxis == AXIS_AZ){
         updateStatus(STA_MC_STOW_AZ_ERROR,0);
+        updateStatus(STA_MC_AZ_STOW_LOCK_IN_PROGRESS,0);
+        updateStatus(STA_MC_AZ_STOW_UNLOCK_IN_PROGRESS,0);
       }
-      else if(runTime.stowControl.axisId == AXIS_EL){
-        if(runTime.stowControl.stowStatus == STA_MC_EL_STOW_LOCKD){
-          runTime.pidEL.stowState = STOW_LOCKED;
-        }
-        else if(runTime.stowControl.stowStatus == STA_MC_EL_STOW_UNLOCKD){
-          runTime.pidEL.stowState = STOW_UNLOCKED;
-        }
-        else{
-          runTime.pidEL.stowState = STOW_UNKNOW;
-        }        
+      else if(runTime.activeStowAxis == AXIS_EL){
         updateStatus(STA_MC_STOW_EL_ERROR,0);
+        updateStatus(STA_MC_EL_STOW_LOCK_IN_PROGRESS,0);
+        updateStatus(STA_MC_EL_STOW_UNLOCK_IN_PROGRESS,0);
       }
     }
        
     if(evt & EV_STOW_ACTION_FAIL){
       //sysValidStow(runTime.stowCommand,&runTime.pidEL);
-      runTime.stowValidState = 0;
-      if(runTime.stowControl.axisId == AXIS_AZ){
+      //runTime.stowValidState = 0;
+      if(runTime.activeStowAxis == AXIS_AZ){
         updateStatus(STA_MC_STOW_AZ_ERROR,1);
+        updateStatus(STA_MC_AZ_STOW_LOCK_IN_PROGRESS,0);
+        updateStatus(STA_MC_AZ_STOW_UNLOCK_IN_PROGRESS,0);
+        //updateStatus(STA_MC_AZ_STOW_LOCKD,0);
+        //updateStatus(STA_MC_AZ_STOW_UNLOCKD,0);
       }
-      else if(runTime.stowControl.axisId == AXIS_EL){
+      else if(runTime.activeStowAxis == AXIS_EL){
         updateStatus(STA_MC_STOW_EL_ERROR,1);
+        updateStatus(STA_MC_EL_STOW_LOCK_IN_PROGRESS,0);
+        updateStatus(STA_MC_EL_STOW_UNLOCK_IN_PROGRESS,0);
+        //updateStatus(STA_MC_EL_STOW_LOCKD,0);
+        //updateStatus(STA_MC_EL_STOW_UNLOCKD,0);
       }
     }
     

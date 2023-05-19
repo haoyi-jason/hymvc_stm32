@@ -20305,6 +20305,12 @@
             <file>
                 <name>$PROJ_DIR$\source\PID\nested_pid.h</name>
             </file>
+            <file>
+                <name>$PROJ_DIR$\source\PID\stow_control.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\source\PID\stow_control.h</name>
+            </file>
         </group>
         <group>
             <name>Position_Control</name>

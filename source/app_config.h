@@ -71,12 +71,12 @@ enum _STOW_ACTIVITY
   ACT_LOCK
 };
 
-enum _STOW_STATE
-{
-  STOW_UNKNOW,
-  STOW_LOCKED,
-  STOW_UNLOCKED
-};
+//enum _STOW_STATE
+//{
+//  STOW_UNKNOW,
+//  STOW_LOCKED,
+//  STOW_UNLOCKED
+//};
 
 typedef struct{
   uint8_t driver_on[2];  // DO channel to on
@@ -131,14 +131,14 @@ typedef struct{
   bool joystickMode;
 }_pid_config_t;
 
-typedef struct{
-  _control_id_map *ctrl_map;
-  uint8_t stow_activity;
-  uint16_t timeout_ms;
-  uint16_t cycletime_ms;
-  uint8_t stowStatus;
-  uint8_t axisId;
-}_stow_control_t;
+//typedef struct{
+//  _control_id_map *ctrl_map;
+//  uint8_t stow_activity;
+//  uint16_t timeout_ms;
+//  uint16_t cycletime_ms;
+//  uint8_t stowStatus;
+//  uint8_t axisId;
+//}_stow_control_t;
 
 typedef struct{
   uint16_t corse_gain[AD57_CHANNELS];   // OD 2100

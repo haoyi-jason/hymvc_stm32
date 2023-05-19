@@ -18532,6 +18532,12 @@
             <file>
                 <name>$PROJ_DIR$\source\PID\nested_pid.h</name>
             </file>
+            <file>
+                <name>$PROJ_DIR$\source\PID\stow_control.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\source\PID\stow_control.h</name>
+            </file>
         </group>
         <group>
             <name>Position_Control</name>
@@ -18601,6 +18607,9 @@
         </file>
         <file>
             <name>$PROJ_DIR$\source\task_systemValid.c</name>
+            <excluded>
+                <configuration>Debug</configuration>
+            </excluded>
         </file>
         <file>
             <name>$PROJ_DIR$\source\task_systemvalid.h</name>
