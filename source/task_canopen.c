@@ -37,9 +37,12 @@ description:
 #include "pid/nested_pid.h"
 #include "pid/stow_control.h"
 
+#include "ylib/utility/st_chipid.h"
+
 static void cmd_report(BaseSequentialStream *chp, int argc, char *argv[]); 
 static void cmd_log(BaseSequentialStream *chp, int argc, char *argv[]); 
 static void sys_log();
+static void sys_log_header();
 static void sys_logEx(_nested_pid_t *pid);
 static void load_pid_param();
 static void load_pid_param_dummy();
@@ -154,15 +157,17 @@ typedef struct{
 #if(CO_CONFIGURE_STORAGE_ENABLE) & CO_CONFIG_STORAGE_ENABLE
   CO_storage_t storage;
 #endif
-  uint32_t mcStatus;
+  uint32_t mcStatus,mcStatus_new;
   uint16_t stowCommand;
   uint8_t stowValidState;
 //  _stow_control_t stowControl;
   bool localLog;
   uint32_t logIntervalMs;
   virtual_timer_t vtLog;
+  virtual_timer_t vtUpdate;
   _nested_pid_t pidConfig[NOF_AXES];
   _stow_config_t stowConfig[NOF_AXES];
+  bool stow_control_enable;
   uint8_t activeStowAxis;
 }_runTime_t;
 
@@ -188,7 +193,7 @@ static CANConfig cfg500K = {
 //};
 
 static void updateStatus(uint8_t mask, bool set);
-
+static void issueStatusUpdate(bool force);
 
 void testcan(CANDriver *dev)
 {
@@ -253,30 +258,44 @@ static ODR_t OD_Control_Input_6040(OD_stream_t *stream, const void *buf, OD_size
       uint16_t v = CO_getUint16(buf);
       uint16_t msk = v & 0x03;
       if(v == 0x10){
-        runTime.stowCommand = STOW_GO_UNLOCK;
-        chSysLock();
-        chEvtSignal(runTime.appThread,EV_AZ_STOW_LOCK);
-        chSysUnlock();
+        runTime.stowConfig[AXIS_AZ].activity = STOW_GO_UNLOCK;
       }
       else if(v == 0x11){
-        runTime.stowCommand = STOW_GO_LOCK;
-        chSysLock();
-        chEvtSignal(runTime.appThread,EV_AZ_STOW_LOCK);
-        chSysUnlock();
+        runTime.stowConfig[AXIS_AZ].activity = STOW_GO_LOCK;
       }
-      msk = v & 0x0C;
-      if(v == 0x020){
-        runTime.stowCommand = STOW_GO_UNLOCK;
-        chSysLock();
-        chEvtSignal(runTime.appThread,EV_EL_STOW_LOCK);
-        chSysUnlock();
+      //msk = v & 0x0C;
+      else if(v == 0x20){
+        runTime.stowConfig[AXIS_EL].activity = STOW_GO_UNLOCK;
       }
       else if(v == 0x21){
-        runTime.stowCommand = STOW_GO_LOCK;
+        runTime.stowConfig[AXIS_EL].activity = STOW_GO_LOCK;
+      }
+      else if(v == 0x40){ // disable stow
+        runTime.stow_control_enable = false;
         chSysLock();
-        chEvtSignal(runTime.appThread,EV_EL_STOW_LOCK);
+        chEvtSignal(runTime.appThread,EV_STOW_CONTROL);
         chSysUnlock();
       }
+      else if(v == 0x41){ // enable stow
+        runTime.stow_control_enable = true;
+        chSysLock();
+        chEvtSignal(runTime.appThread,EV_STOW_CONTROL);
+        chSysUnlock();
+      }
+      else if(v == 0x80){ // ant stow
+        runTime.stow_control_enable = false;
+        chSysLock();
+        chEvtSignal(runTime.appThread,EV_ANT_STOW);
+        chSysUnlock();
+        
+      }
+      else if(v == 0x81){ // ant stow
+        runTime.stow_control_enable = true;
+        chSysLock();
+        chEvtSignal(runTime.appThread,EV_ANT_STOW);
+        chSysUnlock();
+      }
+      
     }
     // subindex 0x03, log control
     else if(stream->subIndex == 0x03){
@@ -419,16 +438,18 @@ static ODR_t OD_write_ao_6413_real(OD_stream_t *stream, const void *buf, OD_size
 //  return (true);
 //}
 
-static void pid_run_ex(uint8_t axis, uint16_t mode)
+static void pid_run_ex()
 {
-  if(axis < NOF_AXES){
+  //if(axis < NOF_AXES){
     load_pid_param_ex();
     uint16_t mode;
     OD_get_u16(OD_ENTRY_H6040,0x04,&mode,true);
     
-    runTime.pidConfig[axis].speedMode = (mode==0)?true:false;
-    nested_pid_init(axis,&runTime.pidConfig[axis]);
-  }
+    runTime.pidConfig[AXIS_AZ].speedMode = (mode==0)?true:false;
+    runTime.pidConfig[AXIS_EL].speedMode = (mode==0)?true:false;
+    nested_pid_init(AXIS_AZ,&runTime.pidConfig[AXIS_AZ]);
+    nested_pid_init(AXIS_EL,&runTime.pidConfig[AXIS_EL]);
+  //}
 }
 
 static void pid_stop_ex(uint8_t axis)
@@ -504,17 +525,25 @@ static void updateStatus(uint8_t mask, bool set)
 {
     uint32_t sta = runTime.mcStatus;
     if(set){
-      sta |= (1 << mask);
+      runTime.mcStatus_new |= (1 << mask);
     }
     else{
-      sta  &= ~(1 << mask);
+      runTime.mcStatus_new &= ~(1 << mask);
     }
-    if(sta != runTime.mcStatus){
-      runTime.mcStatus = sta;
+}
+
+static void issueStatusUpdate(bool force)
+{
+  if(force){
+      OD_requestTPDO(runTime.cosFlags.statusFlag,0);
+  }
+  else{
+    if(runTime.mcStatus_new != runTime.mcStatus){
+      runTime.mcStatus = runTime.mcStatus_new;
       od_set_status(runTime.mcStatus);
       OD_requestTPDO(runTime.cosFlags.statusFlag,0);
     }
-  
+  }
 }
 
 static void logTimer(void *arg)
@@ -524,6 +553,14 @@ static void logTimer(void *arg)
   if(runTime.localLog){
     chVTSetI(&runTime.vtLog,TIME_MS2I(runTime.logIntervalMs),logTimer,NULL);
   }
+  chSysUnlockFromISR();
+}
+
+static void updateTimer(void *arg)
+{
+  chSysLockFromISR();
+  chEvtSignalI(runTime.appThread, EV_UPDATE);
+  chVTSetI(&runTime.vtUpdate,TIME_MS2I(100),updateTimer,NULL);
   chSysUnlockFromISR();
 }
 
@@ -599,6 +636,7 @@ static void load_pid_param_ex()
 #ifdef OD_ENTRY_H60A0
   pid = &runTime.pidConfig[0];
   stow = &runTime.stowConfig[0];
+  stow->axis_id = AXIS_AZ;
   OD_get_f32(OD_ENTRY_H60A0,0x04,&pid->pos.param.kp,true);
   OD_get_f32(OD_ENTRY_H60A0,0x05,&pid->pos.param.ki,true);
   OD_get_f32(OD_ENTRY_H60A0,0x06,&pid->pos.param.kd,true);
@@ -608,13 +646,24 @@ static void load_pid_param_ex()
   OD_get_f32(OD_ENTRY_H60A0,0x11,&pid->pos.output_clamp.min,true);
   OD_get_f32(OD_ENTRY_H60A0,0x12,&pid->pos.output_clamp.max,true);
   OD_get_f32(OD_ENTRY_H60A0,0x13,&pid->pos.output_clamp.offset,true);
+  OD_get_f32(OD_ENTRY_H60A0,0x13,&pid->homeOffset,true);
+  OD_get_f32(OD_ENTRY_H60A0,0x14,&pid->homeError,true);
+  OD_get_f32(OD_ENTRY_H60A0,0x15,&pid->homeSpeed,true);
+
   // convert degree setting to radian
   pid->pos.input_range.min *= DEG2RAD;
   pid->pos.input_range.max *= DEG2RAD;
   pid->pos.input_range.offset *= DEG2RAD;
   pid->pos.input_range.min -= PI;
   pid->pos.input_range.max -= PI;
-  pid->pos.input_range.offset -= PI;
+  //pid->pos.input_range.offset -= PI;
+  
+  if(pid->pos.input_range.min > -PI*0.99){
+    pid->pos.input_range.clipped = true;
+  }
+  if(pid->pos.input_range.max < PI*0.99){
+    pid->pos.input_range.clipped = true;
+  }
   
 
   OD_get_f32(OD_ENTRY_H60A0,0x07,&pid->spd.param.kp,true);
@@ -646,6 +695,7 @@ static void load_pid_param_ex()
     pid->spd.driveOutput = 0; 
     pid->spd.update = NULL;
     
+    pid->spd.input_range.clipped = false;
     
     // control map
     pid->controlMap.axis_id = AXIS_AZ;
@@ -665,15 +715,19 @@ static void load_pid_param_ex()
     OD_get_u8(OD_ENTRY_H2006,0x02,&stow->unlock_sense,true);
     OD_get_u8(OD_ENTRY_H2006,0x05,&pid->controlMap.servo_rdy[0],true);
     OD_get_u8(OD_ENTRY_H2006,0x06,&pid->controlMap.servo_rdy[1],true);
+    pid->controlMap.stow_lock_sense = stow->lock_sense;
+    pid->controlMap.stow_unlock_sense = stow->unlock_sense;
 #endif
     
 #ifdef OD_ENTRY_H2007
     OD_get_u8(OD_ENTRY_H2007,0x01,&pid->controlMap.servo_cmd[0],true);
     OD_get_u8(OD_ENTRY_H2007,0x02,&pid->controlMap.servo_cmd[1],true);
+    OD_get_u8(OD_ENTRY_H2007,0x05,&pid->controlMap.pv_pos,true);
+    OD_get_u8(OD_ENTRY_H2007,0x05,&pid->controlMap.pv_spd,true);
 #endif    
     
-    pid->controlMap.pv_pos = 0;
-    pid->controlMap.pv_spd = 0;
+//    pid->controlMap.pv_pos = 0;
+//    pid->controlMap.pv_spd = 0;
     pid->controlMap.sp_pos = 0;
     pid->controlMap.sp_spd = 0;
     pid->cycleTimeUs = 5000;
@@ -687,13 +741,18 @@ static void load_pid_param_ex()
 #ifdef OD_ENTRY_H6000
     OD_get_u32(OD_ENTRY_H6000,0x03,&stow->cycle_time_ms,true);
     OD_get_u32(OD_ENTRY_H6000,0x04,&stow->timeout_ms,true);
+    OD_get_u32(OD_ENTRY_H6000,0x09,&stow->idledelay_ms,true);
+    OD_get_u32(OD_ENTRY_H6000,0x05,&pid->validMask,true);
+    OD_get_u32(OD_ENTRY_H6000,0x07,&pid->homeMethod,true);
+#endif   
+    pid->stowConfig = stow;
 #endif
     
-#endif
 
 #ifdef OD_ENTRY_H60A1
   pid = &runTime.pidConfig[1];
   stow = &runTime.stowConfig[1];
+  stow->axis_id = AXIS_EL;
   OD_get_f32(OD_ENTRY_H60A1,0x04,&pid->pos.param.kp,true);
   OD_get_f32(OD_ENTRY_H60A1,0x05,&pid->pos.param.ki,true);
   OD_get_f32(OD_ENTRY_H60A1,0x06,&pid->pos.param.kd,true);
@@ -703,10 +762,24 @@ static void load_pid_param_ex()
   OD_get_f32(OD_ENTRY_H60A1,0x11,&pid->pos.output_clamp.min,true);
   OD_get_f32(OD_ENTRY_H60A1,0x12,&pid->pos.output_clamp.max,true);
   OD_get_f32(OD_ENTRY_H60A1,0x13,&pid->pos.output_clamp.offset,true);
+  OD_get_f32(OD_ENTRY_H60A1,0x13,&pid->homeError,true);
+  OD_get_f32(OD_ENTRY_H60A0,0x14,&pid->homeOffset,true);
+  OD_get_f32(OD_ENTRY_H60A0,0x15,&pid->homeSpeed,true);
   // convert degree setting to radian
   pid->pos.input_range.min *= DEG2RAD;
   pid->pos.input_range.max *= DEG2RAD;
   pid->pos.input_range.offset *= DEG2RAD;
+
+  pid->pos.input_range.min -= PI;
+  pid->pos.input_range.max -= PI;
+  //pid->pos.input_range.offset -= PI;
+
+  if(pid->pos.input_range.min > -PI){
+    pid->pos.input_range.clipped = true;
+  }
+  if(pid->pos.input_range.max < PI){
+    pid->pos.input_range.clipped = true;
+  }
   
 
   OD_get_f32(OD_ENTRY_H60A1,0x07,&pid->spd.param.kp,true);
@@ -738,7 +811,7 @@ static void load_pid_param_ex()
     pid->spd.driveOutput = 0; 
     pid->spd.update = NULL;
     
-    
+    pid->spd.input_range.clipped = false;
     // control map
     pid->controlMap.axis_id = AXIS_EL;
     
@@ -756,17 +829,21 @@ static void load_pid_param_ex()
     OD_get_u8(OD_ENTRY_H2006,0x04,&stow->unlock_sense,true);
     OD_get_u8(OD_ENTRY_H2006,0x07,&pid->controlMap.servo_rdy[0],true);
     OD_get_u8(OD_ENTRY_H2006,0x08,&pid->controlMap.servo_rdy[1],true);
+    pid->controlMap.stow_lock_sense = stow->lock_sense;
+    pid->controlMap.stow_unlock_sense = stow->unlock_sense;
 #endif
     
 #ifdef OD_ENTRY_H2007
     OD_get_u8(OD_ENTRY_H2007,0x03,&pid->controlMap.servo_cmd[0],true);
     OD_get_u8(OD_ENTRY_H2007,0x04,&pid->controlMap.servo_cmd[1],true);
+    OD_get_u8(OD_ENTRY_H2007,0x05,&pid->controlMap.pv_pos,true);
+    OD_get_u8(OD_ENTRY_H2007,0x05,&pid->controlMap.pv_spd,true);
 #endif    
-    
-    pid->controlMap.pv_pos = 0;
-    pid->controlMap.pv_spd = 0;
-    pid->controlMap.sp_pos = 0;
-    pid->controlMap.sp_spd = 0;
+
+//    pid->controlMap.pv_pos = 0;
+//    pid->controlMap.pv_spd = 0;
+    pid->controlMap.sp_pos = 1;
+    pid->controlMap.sp_spd = 1;
     pid->cycleTimeUs = 5000;
     pid->stowValid = false;
     pid->stowState = STOW_UNKNOW;
@@ -778,11 +855,14 @@ static void load_pid_param_ex()
 #ifdef OD_ENTRY_H6000
     OD_get_u32(OD_ENTRY_H6000,0x03,&stow->cycle_time_ms,true);
     OD_get_u32(OD_ENTRY_H6000,0x04,&stow->timeout_ms,true);
+    OD_get_u32(OD_ENTRY_H6000,0x09,&stow->idledelay_ms,true);
+    OD_get_u32(OD_ENTRY_H6000,0x06,&pid->validMask,true);
+    OD_get_u32(OD_ENTRY_H6000,0x08,&pid->homeMethod,true);
 #endif
-
+    pid->stowConfig = stow;
 #endif
     
-
+ // runTime.stow_control_enable = false;
   
 }
 
@@ -1153,13 +1233,15 @@ static THD_FUNCTION(procApp,p)
   //runTime.stowControl.stowValidState = 0x0;
   
   if(runTime.pidAutoStart){
-    start_pid();
+    pid_run_ex();
   }
   
   chVTObjectInit(&runTime.vtLog);
-  od_set_status(runTime.mcStatus);
-  OD_requestTPDO(runTime.cosFlags.statusFlag,0);
   
+  chVTObjectInit(&runTime.vtUpdate);
+  chVTSetI(&runTime.vtUpdate,TIME_MS2I(100),updateTimer,NULL);
+  
+  issueStatusUpdate(true);  
   while(!_stop)
   {
     if(chThdShouldTerminateX()){
@@ -1189,6 +1271,9 @@ static THD_FUNCTION(procApp,p)
 //    }
     
     eventmask_t evt = chEvtWaitAnyTimeout(ALL_EVENTS, TIME_MS2I(10));
+    if(evt & EV_UPDATE){
+      issueStatusUpdate(true);
+    }
     if(evt & EV_ADC_ACQUIRED){
       // update adc data 
       int32_t buffer[AD76_NOF_CHANNEL];
@@ -1224,25 +1309,26 @@ static THD_FUNCTION(procApp,p)
       
       OD_requestTPDO(runTime.cosFlags.pvFlag,1);
       OD_requestTPDO(runTime.cosFlags.pvFlag,2);
-      OD_requestTPDO(runTime.cosFlags.pvFlag,3);
-      OD_requestTPDO(runTime.cosFlags.pvFlag,4);
+      //OD_requestTPDO(runTime.cosFlags.pvFlag,3);
+      //OD_requestTPDO(runTime.cosFlags.pvFlag,4);
 
     }
-    if(evt & EV_PID_UPDATEDA){
-      
+    if(evt & EV_PID_STATE_ERROR_AZ){
+      updateStatus(STA_SYS_PIDAZ_READY,0);
     }
     if(evt & EV_PID_START){
       //start_pid();
-      uint16_t mode;
-      OD_get_u16(OD_ENTRY_H6040,0x04,&mode,true);
-      pid_run_ex(0,mode);
+//      uint16_t mode;
+//      OD_get_u16(OD_ENTRY_H6040,0x04,&mode,true);
+      //pid_run_ex(0);
 //      pid_run(1,mode);
-      
+      nested_pid_set_user_control(false);
     }
     if(evt & EV_PID_STOP){
       //stop_pid();
-      pid_stop_ex(0);
+      //pid_stop_ex(0);
       //pid_stop(1);
+      nested_pid_set_user_control(true);
     }
     
     if(evt & EV_PID_AZ_STARTED){
@@ -1293,68 +1379,84 @@ static THD_FUNCTION(procApp,p)
       }
     }
     
-    if(evt & EV_AZ_STOW_LOCK){
+    if(evt & EV_STOW_CONTROL){
       //runTime.stowControl.axisId = runTime.pidAZ.axisId;
       //validStow(runTime.stowCommand,&runTime.stowControl);
-      load_pid_param_ex();
-      runTime.activeStowAxis = AXIS_AZ;
-      runTime.stowConfig[0].activity = runTime.stowCommand;
-      if(runTime.stowCommand == STOW_GO_LOCK){
-        updateStatus(STA_MC_AZ_STOW_LOCK_IN_PROGRESS,1);
+
+      nested_pid_stow_control(runTime.stow_control_enable);
+      if(runTime.stow_control_enable){
+//        load_pid_param_ex();
+//        if(runTime.stowConfig[0].activity == STOW_GO_LOCK){
+//          updateStatus(STA_MC_AZ_STOW_LOCK_IN_PROGRESS,1);
+//        }
+//        else if(runTime.stowConfig[0].activity == STOW_GO_UNLOCK){
+//          updateStatus(STA_MC_AZ_STOW_UNLOCK_IN_PROGRESS,1);
+//        }
+//        if(runTime.stowConfig[1].activity == STOW_GO_LOCK){
+//          updateStatus(STA_MC_EL_STOW_LOCK_IN_PROGRESS,1);
+//        }
+//        else if(runTime.stowConfig[1].activity == STOW_GO_UNLOCK){
+//          updateStatus(STA_MC_EL_STOW_UNLOCK_IN_PROGRESS,1);
+//        }
+//        stow_control_start(runTime.stowConfig);
       }
-      else if(runTime.stowCommand == STOW_GO_UNLOCK){
-        updateStatus(STA_MC_AZ_STOW_UNLOCK_IN_PROGRESS,1);
+      else{
+//        stow_control_stop();
       }
-      stow_control_start(&runTime.stowConfig[0]);
+    }
+    
+    if(evt & EV_STOW_UPDATE){
+        if(runTime.stowConfig[0].activity == STOW_GO_LOCK){
+          updateStatus(STA_MC_AZ_STOW_LOCK_IN_PROGRESS,1);
+        }
+        else if(runTime.stowConfig[0].activity == STOW_GO_UNLOCK){
+          updateStatus(STA_MC_AZ_STOW_UNLOCK_IN_PROGRESS,1);
+        }
+        if(runTime.stowConfig[1].activity == STOW_GO_LOCK){
+          updateStatus(STA_MC_EL_STOW_LOCK_IN_PROGRESS,1);
+        }
+        else if(runTime.stowConfig[1].activity == STOW_GO_UNLOCK){
+          updateStatus(STA_MC_EL_STOW_UNLOCK_IN_PROGRESS,1);
+        }
     }
        
     if(evt & EV_EL_STOW_LOCK){
-//      runTime.stowControl.axisId = runTime.pidEL.axisId;
-      //validStow(runTime.stowCommand,&runTime.stowControl);
-      load_pid_param_ex();
-      runTime.activeStowAxis = AXIS_EL;
-      runTime.stowConfig[1].activity = runTime.stowCommand;
-      if(runTime.stowCommand == STOW_GO_LOCK){
-        updateStatus(STA_MC_EL_STOW_LOCK_IN_PROGRESS,1);
-      }
-      else if(runTime.stowCommand == STOW_GO_UNLOCK){
-        updateStatus(STA_MC_EL_STOW_UNLOCK_IN_PROGRESS,1);
-      }
-      stow_control_start(&runTime.stowConfig[1]);
     }
     
     if(evt & EV_STOW_ACTION_DONE){
       //sysValidStow(runTime.stowCommand,&runTime.pidAZ);
       //runTime.stowValidState = 0;
-      if(runTime.activeStowAxis == AXIS_AZ){
+      if(runTime.stowConfig[AXIS_AZ].state != STOW_PROCESSING){
         updateStatus(STA_MC_STOW_AZ_ERROR,0);
         updateStatus(STA_MC_AZ_STOW_LOCK_IN_PROGRESS,0);
         updateStatus(STA_MC_AZ_STOW_UNLOCK_IN_PROGRESS,0);
       }
-      else if(runTime.activeStowAxis == AXIS_EL){
+      if(runTime.stowConfig[AXIS_EL].state != STOW_PROCESSING){
         updateStatus(STA_MC_STOW_EL_ERROR,0);
         updateStatus(STA_MC_EL_STOW_LOCK_IN_PROGRESS,0);
         updateStatus(STA_MC_EL_STOW_UNLOCK_IN_PROGRESS,0);
       }
+      nested_pid_stow_control(false);
     }
        
     if(evt & EV_STOW_ACTION_FAIL){
       //sysValidStow(runTime.stowCommand,&runTime.pidEL);
       //runTime.stowValidState = 0;
-      if(runTime.activeStowAxis == AXIS_AZ){
+      if(runTime.stowConfig[AXIS_AZ].state != STOW_PROCESSING ){
         updateStatus(STA_MC_STOW_AZ_ERROR,1);
         updateStatus(STA_MC_AZ_STOW_LOCK_IN_PROGRESS,0);
         updateStatus(STA_MC_AZ_STOW_UNLOCK_IN_PROGRESS,0);
         //updateStatus(STA_MC_AZ_STOW_LOCKD,0);
         //updateStatus(STA_MC_AZ_STOW_UNLOCKD,0);
       }
-      else if(runTime.activeStowAxis == AXIS_EL){
+      if(runTime.stowConfig[AXIS_EL].state != STOW_PROCESSING){
         updateStatus(STA_MC_STOW_EL_ERROR,1);
         updateStatus(STA_MC_EL_STOW_LOCK_IN_PROGRESS,0);
         updateStatus(STA_MC_EL_STOW_UNLOCK_IN_PROGRESS,0);
         //updateStatus(STA_MC_EL_STOW_LOCKD,0);
         //updateStatus(STA_MC_EL_STOW_UNLOCKD,0);
       }
+      nested_pid_stow_control(false);
     }
     
     if(evt & EV_PID_AZ_RDY){
@@ -1367,6 +1469,7 @@ static THD_FUNCTION(procApp,p)
     if(evt & EV_LOCAL_LOG_START){
       
       runTime.localLog = true;
+      sys_log_header();
       chVTSet(&runTime.vtLog,TIME_MS2I(runTime.logIntervalMs),logTimer,NULL);
     }
 
@@ -1375,11 +1478,39 @@ static THD_FUNCTION(procApp,p)
     }
     if(evt & EV_LOCAL_LOG_EVT){
       //sys_log();
-      sys_logEx(&runTime.pidConfig[0]);
-      sys_logEx(&runTime.pidConfig[1]);
+      sys_logEx(runTime.pidConfig);
+      //sys_logEx(&runTime.pidConfig[1]);
     }
     
-
+    if(evt & EV_ANT_STOW){
+      if(runTime.stow_control_enable){
+        load_pid_param_ex();
+        nested_pid_home_init(AXIS_AZ,&runTime.pidConfig[0]);
+        nested_pid_home_init(AXIS_EL,&runTime.pidConfig[1]);
+      }
+      else{
+        nested_pid_stop();
+      }
+    }
+  
+    if(evt & EV_AZ_HOMESEARCHING){
+      if(runTime.pidConfig[AXIS_AZ].homeState == HOME_INIT){
+        updateStatus(STA_SYS_ANT_STOW_AZ,1);
+      }
+      else{
+        updateStatus(STA_SYS_ANT_STOW_AZ,0);
+      }
+    }
+    if(evt & EV_EL_HOMESEARCHING){
+      if(runTime.pidConfig[AXIS_EL].homeState == HOME_INIT){
+        updateStatus(STA_SYS_ANT_STOW_EL,1);
+      }
+      else{
+        updateStatus(STA_SYS_ANT_STOW_AZ,0);
+      }
+    }
+    
+    issueStatusUpdate(false);
   }
   
     /* stop pid first */
@@ -1456,39 +1587,35 @@ static void load_canopen_params()
   OD_PERSIST_COMM.x1018_identity.vendor_ID = VENDER_ID;
   OD_PERSIST_COMM.x1018_identity.productCode = PROEUCT_CODE;
   OD_PERSIST_COMM.x1018_identity.revisionNumber = REVISION_NUMBER;
-  OD_PERSIST_COMM.x1018_identity.serialNumber = SERIAL_NUMVER;
+  OD_PERSIST_COMM.x1018_identity.serialNumber = readChipID32(0);
 
-  OD_entry_t *od = OD_find(OD,0x2010);
-  runTime.nodeId = 0x01;
-  if(od != NULL){                
-    OD_get_u8(od,0x0,&runTime.nodeId,true);
-  }
+  runTime.nodeId = OD_PERSIST_COMM.x2000_nodeID;
+
   if(runTime.nodeId == 0x00)
     runTime.nodeId = 0x01;
   runTime.CO->nodeIdUnconfigured = 0;
  // read initial settings
-  od = OD_find(OD,0x6000); 
-  if(od != NULL){
+  
+  runTime.pidAutoStart = false;
+  runTime.logIntervalMs = 1000;
+#ifdef OD_ENTRY_H6000
     uint32_t u32;
-    OD_get_u32(od,0x1,&u32,true);
+    OD_get_u32(OD_ENTRY_H6000,0x1,&u32,true);
     if(u32 == 1){
       runTime.pidAutoStart = true;
     }
-    else{
-      runTime.pidAutoStart = false;
-    }
-    
-    OD_get_u32(od,0x2,&u32,true);
+   
+    OD_get_u32(OD_ENTRY_H6000,0x2,&u32,true);
     if((u32 >= 1) && (u32 <=10000)){
       runTime.logIntervalMs = u32;
     }
-  }
+#endif
+  
 }
 
 static msg_t reset_canopen(void *p)
 {
   uint32_t errInfo = 0;
-   load_canopen_params();
   // initialize new instance of CANOpen */
   pCORunTime = &runTime;
   if(runTime.CO != NULL){
@@ -1511,6 +1638,7 @@ static msg_t reset_canopen(void *p)
                         storageEntries,storageEntriesCount, &storageInitError);
   
 #endif
+   load_canopen_params();
   CO_ReturnError_t err;
   runTime.CO->CANmodule->CANnormal = false;
   CO_CANsetConfigurationMode(runTime.CO->CANmodule->CANptr);
@@ -1759,30 +1887,50 @@ void task_canopen_init()
   chThdCreateStatic(waCO,sizeof(waCO),NORMALPRIO,procCO,&CAND1);
   chThdCreateStatic(waCANRX1,sizeof(waCANRX1),NORMALPRIO-1,thCanRx,&CAND1);
 }
+/*
+  log sequency
+  time, AZ_POS_SP, AZ_POS_PV, AZ_SPD_SP,AZ_SPD_PV, AZ_M1,AZ_M2, \ 
+        EL_POS_SP, EL_POS_PV, EL_SPD_SP,EL_SPD_PV, EL_M1,EL_M2,
+*/
 
+static void sys_log_header()
+{
+  char msg[128];
+  char *ptr = msg;
+  ptr += chsnprintf(ptr,128,"TIME,AZ_POS_SP,AZ_POS_PV,AZ_SPD_SP,AZ_SPD_PV,AZ_M1,AZ_M2,");
+  ptr += chsnprintf(ptr,128,"EL_POS_SP,EL_POS_PV,EL_SPD_SP,EL_SPD_PV,EL_M1,EL_M2\n");
+  chprintf((BaseSequentialStream*)&CONSOLE,msg);
+  
+}
 static void sys_logEx(_nested_pid_t *pid)
 {
   if(pid->stream  == NULL) return;
-
+  _nested_pid_t *az = (_nested_pid_t *)&pid[0];
+  _nested_pid_t *el = (_nested_pid_t *)&pid[1];
+  
   char msg[128];
   int32_t adv[8];
+  uint16_t dav[4];
+  analot_output_get_raw(0xff,dav);
+
   char *ptr = msg;
   systime_t now = chVTGetSystemTime();
   ptr += chsnprintf(ptr,128,"%ul,", TIME_I2MS(now));
-  ptr += chsnprintf(ptr,128,"AXIS:%s,", pid->controlMap.axis_id == AXIS_AZ?"AZ\0":"EL\0");
-  ptr += chsnprintf(ptr,128,"%ul,",TIME_I2MS(chVTGetSystemTime()));
-  ptr += chsnprintf(ptr,128,"%5.2f,%5.2f,",pid->pos.cal.pv,pid->pos.cal.sp);
-  ptr += chsnprintf(ptr,128,"%5.2f,%5.2f,",pid->spd.cal.pv, pid->spd.cal.sp);
-  analog_input_read(0xff,adv);
-  ptr += chsnprintf(ptr,128,"%d,%d,%d,%d,",adv[0],adv[1],adv[2],adv[3]);
-  uint16_t dav[4];
-  analot_output_get_raw(0xff,dav);
-  ptr += chsnprintf(ptr,128,"%d,%d,%d,%d,",dav[0],dav[1],dav[2],dav[3]);
-  uint16_t iso_in, iso_out;
-  digital_get_iso_inw(0,&iso_in);
-  digital_get_iso_outw(0,&iso_out);
-  ptr += chsnprintf(ptr,128,"%04x,%04x,",iso_in,iso_out);
-  ptr += chsnprintf(ptr,128,"\r\n");
+  ptr += chsnprintf(ptr,128,"%5.2f,%5.2f,",az->pos.cal.sp,az->pos.cal.pv);
+  ptr += chsnprintf(ptr,128,"%5.2f,%5.2f,",az->spd.cal.sp,az->spd.cal.pv);
+  ptr += chsnprintf(ptr,128,"%d,%d,",dav[0],dav[1]);
+  
+  ptr += chsnprintf(ptr,128,"%5.2f,%5.2f,",el->pos.cal.sp,el->pos.cal.pv);
+  ptr += chsnprintf(ptr,128,"%5.2f,%5.2f,",el->spd.cal.sp,el->spd.cal.pv);
+  ptr += chsnprintf(ptr,128,"%d,%d\n",dav[2],dav[3]);
+//  analog_input_read(0xff,adv);
+//  ptr += chsnprintf(ptr,128,"%d,%d,%d,%d,",adv[0],adv[1],adv[2],adv[3]);
+//  ptr += chsnprintf(ptr,128,"%d,%d,%d,%d,",dav[0],dav[1],dav[2],dav[3]);
+//  uint16_t iso_in, iso_out;
+//  digital_get_iso_inw(0,&iso_in);
+//  digital_get_iso_outw(0,&iso_out);
+//  ptr += chsnprintf(ptr,128,"%04x,%04x,",iso_in,iso_out);
+//  ptr += chsnprintf(ptr,128,"\r\n");
   chprintf((BaseSequentialStream*)&CONSOLE,msg);
   
 }

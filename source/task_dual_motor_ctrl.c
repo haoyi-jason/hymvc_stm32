@@ -387,7 +387,7 @@ static THD_FUNCTION(procDMOTC ,p)
 //      analog_output_set_voltage(PIN_MOT2_AIN, &tq_mot_v[pcfg->axisId][1]);
       analog_output_set_voltage(pcfg->ctrl_map.driver_output[0], &tq_mot_v[pcfg->axisId][0]);
       analog_output_set_voltage(pcfg->ctrl_map.driver_output[1], &tq_mot_v[pcfg->axisId][1]);
-      chEvtSignal(runTime.main,EV_PID_UPDATEDA);
+      //chEvtSignal(runTime.main,EV_PID_UPDATEDA);
     }
 
     /*GPIO toggle*/

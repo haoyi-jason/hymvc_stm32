@@ -209,7 +209,7 @@ void ad7606_read_conversion(AD7606Driver *dev, uint8_t nofGroup)
 {
   uint8_t b[18];
   uint8_t nofTransfer = 0;
-  uint8_t bitsPerRecord ;
+  uint8_t bitsPerRecord = 16 ;
   uint8_t nofCh = 0;
   if(dev->chipID == AD7606){
     nofCh = 8;

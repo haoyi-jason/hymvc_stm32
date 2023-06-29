@@ -19896,7 +19896,7 @@
                         <name>$PROJ_DIR$\source\CANopenNode\301\CO_config.h</name>
                     </file>
                     <file>
-                        <name>$PROJ_DIR$\source\CANopenNode\301\CO_driver.h</name>
+                        <name>$PROJ_DIR$\source\CANopenNode\301\co_driver.h</name>
                     </file>
                     <file>
                         <name>$PROJ_DIR$\source\CANopenNode\301\CO_Emergency.c</name>
@@ -20001,7 +20001,7 @@
                         <name>$PROJ_DIR$\source\CANopenNode\storage\CO_storage.c</name>
                     </file>
                     <file>
-                        <name>$PROJ_DIR$\source\CANopenNode\storage\co_storage.h</name>
+                        <name>$PROJ_DIR$\source\CANopenNode\storage\CO_storage.h</name>
                     </file>
                     <file>
                         <name>$PROJ_DIR$\source\CANopenNode\storage\CO_storageEeprom.c</name>
@@ -20327,14 +20327,23 @@
                 <name>$PROJ_DIR$\source\task_pos_cmd_handler.h</name>
             </file>
         </group>
+        <group>
+            <name>YLIB</name>
+            <file>
+                <name>$extsource$\ylib\numeric\Filters\iir.c</name>
+            </file>
+            <file>
+                <name>$extsource$\ylib\utility\st_chipid.c</name>
+            </file>
+            <file>
+                <name>$extsource$\ylib\utility\st_chipid.h</name>
+            </file>
+        </group>
         <file>
             <name>$PROJ_DIR$\source\can_frame_handler.c</name>
         </file>
         <file>
             <name>$PROJ_DIR$\source\can_frame_handler.h</name>
-        </file>
-        <file>
-            <name>$extsource$\ylib\numeric\Filters\iir.c</name>
         </file>
         <file>
             <name>$PROJ_DIR$\source\main.c</name>
