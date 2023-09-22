@@ -165,10 +165,12 @@ typedef struct{
   uint32_t logIntervalMs;
   virtual_timer_t vtLog;
   virtual_timer_t vtUpdate;
+  virtual_timer_t vtRequestTPDO;
   _nested_pid_t pidConfig[NOF_AXES];
   _stow_config_t stowConfig[NOF_AXES];
   bool stow_control_enable;
   uint8_t activeStowAxis;
+  systime_t tpdoUpdateInterval;
 }_runTime_t;
 
 static _runTime_t runTime, *pCORunTime;
@@ -314,12 +316,39 @@ static ODR_t OD_Control_Input_6040(OD_stream_t *stream, const void *buf, OD_size
     }
     else if(stream->subIndex == 0x04){ // mode
       uint16_t v = CO_getUint16(buf);
-      if( v == 0 || v ==1){ // speed mode
+      if( v == 0 || v ==1 ){ // speed/pos
         nested_pid_set_mode(AXIS_AZ, v);
         nested_pid_set_mode(AXIS_EL, v);
         //runTime.pidConfig[AXIS_AZ].speedMode = (v == 0)?true:false;
         //runTime.pidConfig[AXIS_EL].speedMode = (v == 0)?true:false;
       }
+    }
+    else if(stream->subIndex == 0x05){
+      uint16_t v = CO_getUint16(buf);
+      if(v == 0xAA){
+        _nested_pid_t *pid;
+#ifdef OD_ENTRY_H60A0
+  pid = &runTime.pidConfig[0];
+  OD_get_f32(OD_ENTRY_H60A0,0x04,&pid->pos.param.kp,true);
+  OD_get_f32(OD_ENTRY_H60A0,0x05,&pid->pos.param.ki,true);
+  OD_get_f32(OD_ENTRY_H60A0,0x06,&pid->pos.param.kd,true);
+  OD_get_f32(OD_ENTRY_H60A0,0x07,&pid->spd.param.kp,true);
+  OD_get_f32(OD_ENTRY_H60A0,0x08,&pid->spd.param.ki,true);
+  OD_get_f32(OD_ENTRY_H60A0,0x09,&pid->spd.param.kd,true);
+#endif        
+#ifdef OD_ENTRY_H60A1
+  pid = &runTime.pidConfig[1];
+  OD_get_f32(OD_ENTRY_H60A1,0x04,&pid->pos.param.kp,true);
+  OD_get_f32(OD_ENTRY_H60A1,0x05,&pid->pos.param.ki,true);
+  OD_get_f32(OD_ENTRY_H60A1,0x06,&pid->pos.param.kd,true);
+  OD_get_f32(OD_ENTRY_H60A1,0x07,&pid->spd.param.kp,true);
+  OD_get_f32(OD_ENTRY_H60A1,0x08,&pid->spd.param.ki,true);
+  OD_get_f32(OD_ENTRY_H60A1,0x09,&pid->spd.param.kd,true);
+#endif        
+        nested_pid_update_param(AXIS_AZ);
+        nested_pid_update_param(AXIS_EL);
+      }
+      
     }
   }
   return odr;
@@ -341,30 +370,37 @@ static ODR_t OD_Remote_SP_6063(OD_stream_t *stream, const void *buf, OD_size_t c
     
     switch(stream->subIndex){
     case 1:
+      //fv *=360.;
+      //fv /= 65535;
       nested_pid_set_pos_command(AXIS_AZ,fv);
       break;
     case 2:
-//      if(runTime.pidAZ.stowState != STOW_UNKNOW){
-        nested_pid_set_spd_command(AXIS_AZ,fv);
-//      }
+      //fv -= 32768;
+      fv *= runTime.pidConfig[AXIS_AZ].joystickScale;
+      nested_pid_set_spd_command(AXIS_AZ,fv);
       break;
     case 3:
+      //fv -= 32768;
+      //fv *= 180.;
+      //fv /= 32768;
       nested_pid_set_pos_command(AXIS_EL,fv);
       break;
     case 4:
+      //fv -= 32768;
+      fv *= runTime.pidConfig[AXIS_EL].joystickScale;
       nested_pid_set_spd_command(AXIS_EL,fv);
       break;
-    case 5: // joystick az
-      if(runTime.pidAZ.joystickMode){
-        // put command to d/a port
-        nested_pid_set_spd_command(AXIS_AZ,fv);
-      }
-      break;
-    case 6: // joystick el
-      if(runTime.pidEL.joystickMode){
-        nested_pid_set_spd_command(AXIS_EL,fv);
-      }
-      break;
+//    case 5: // joystick az
+//      if(runTime.pidAZ.joystickMode){
+//        // put command to d/a port
+//        nested_pid_set_spd_command(AXIS_AZ,fv);
+//      }
+//      break;
+//    case 6: // joystick el
+//      if(runTime.pidEL.joystickMode){
+//        nested_pid_set_spd_command(AXIS_EL,fv);
+//      }
+//      break;
     default:break;
     }  
   }
@@ -564,6 +600,14 @@ static void updateTimer(void *arg)
   chSysUnlockFromISR();
 }
 
+static void requestTPDO(void *arg)
+{
+  chSysLockFromISR();
+  chEvtSignalI(runTime.appThread, EV_REQUEST_TPDO);
+  chVTSetI(&runTime.vtRequestTPDO,TIME_MS2I(100),requestTPDO,NULL);
+  chSysUnlockFromISR();
+}
+
 static void load_pid_param_dummy()
 {
   _nested_pid_t *pid = &runTime.pidConfig[0];
@@ -604,7 +648,7 @@ static void load_pid_param_dummy()
   pid->pos.cal.out = 0.;
   pid->pos.cal.err = 0.;
   
-  pid->pos.getPv = resolver_get_position;
+  pid->pos.getPv = resolver_get_position_deg;
   pid->pos.getSp = NULL;
   pid->pos.clamp = NULL;
   pid->pos.driveOutput = 0; 
@@ -649,19 +693,22 @@ static void load_pid_param_ex()
   OD_get_f32(OD_ENTRY_H60A0,0x13,&pid->homeOffset,true);
   OD_get_f32(OD_ENTRY_H60A0,0x14,&pid->homeError,true);
   OD_get_f32(OD_ENTRY_H60A0,0x15,&pid->homeSpeed,true);
+  OD_get_f32(OD_ENTRY_H60A0,0x16,&pid->joystickScale,true);
 
   // convert degree setting to radian
-  pid->pos.input_range.min *= DEG2RAD;
-  pid->pos.input_range.max *= DEG2RAD;
-  pid->pos.input_range.offset *= DEG2RAD;
-  pid->pos.input_range.min -= PI;
-  pid->pos.input_range.max -= PI;
+//  pid->pos.input_range.min *= DEG2RAD;
+//  pid->pos.input_range.max *= DEG2RAD;
+//  pid->pos.input_range.offset *= DEG2RAD;
+//  pid->pos.input_range.min -= PI;
+//  pid->pos.input_range.max -= PI;
   //pid->pos.input_range.offset -= PI;
   
-  if(pid->pos.input_range.min > -PI*0.99){
+//  if(pid->pos.input_range.min > -PI*0.99){
+  if(pid->pos.input_range.min > 0){
     pid->pos.input_range.clipped = true;
   }
-  if(pid->pos.input_range.max < PI*0.99){
+//  if(pid->pos.input_range.max < PI*0.99){
+  if(pid->pos.input_range.max < 360){
     pid->pos.input_range.clipped = true;
   }
   
@@ -679,7 +726,7 @@ static void load_pid_param_ex()
     pid->pos.cal.sp = 0.;
     pid->pos.cal.out = 0.;
     pid->pos.cal.err = 0.;
-    pid->pos.getPv = resolver_get_position;
+    pid->pos.getPv = resolver_get_position_deg;
     pid->pos.getSp = NULL;
     pid->pos.clamp = NULL;
     pid->pos.driveOutput = 0; 
@@ -706,8 +753,9 @@ static void load_pid_param_ex()
     OD_get_u8(OD_ENTRY_H2005,0x03,&pid->controlMap.servo_en[1],true);
     OD_get_u8(OD_ENTRY_H2005,0x04,&pid->controlMap.servo_on[1],true);
     OD_get_u8(OD_ENTRY_H2005,0x10,&pid->controlMap.controlMode,true);
-    OD_get_u8(OD_ENTRY_H2005,0x09,&stow->lock_control,true);
-    OD_get_u8(OD_ENTRY_H2005,0x0A,&stow->unlock_control,true);
+    OD_get_u8(OD_ENTRY_H2005,0x09,&stow->pwr_control,true);
+    OD_get_u8(OD_ENTRY_H2005,0x0A,&stow->dir_control,true);
+    OD_get_u8(OD_ENTRY_H2005,0x0B,&stow->axis_select,true);
 #endif
     
 #ifdef OD_ENTRY_H2006
@@ -744,6 +792,10 @@ static void load_pid_param_ex()
     OD_get_u32(OD_ENTRY_H6000,0x09,&stow->idledelay_ms,true);
     OD_get_u32(OD_ENTRY_H6000,0x05,&pid->validMask,true);
     OD_get_u32(OD_ENTRY_H6000,0x07,&pid->homeMethod,true);
+    OD_get_u32(OD_ENTRY_H6000,0x0B,&pid->stowStableTime,true);
+    OD_get_u32(OD_ENTRY_H6000,0x0C,&pid->stowStableTimeout,true);
+    OD_get_u32(OD_ENTRY_H6000,0x0A,&stow->switchDelayTime,true);
+    OD_get_u32(OD_ENTRY_H6000,0x0D,&runTime.tpdoUpdateInterval,true);
 #endif   
     pid->stowConfig = stow;
 #endif
@@ -762,22 +814,26 @@ static void load_pid_param_ex()
   OD_get_f32(OD_ENTRY_H60A1,0x11,&pid->pos.output_clamp.min,true);
   OD_get_f32(OD_ENTRY_H60A1,0x12,&pid->pos.output_clamp.max,true);
   OD_get_f32(OD_ENTRY_H60A1,0x13,&pid->pos.output_clamp.offset,true);
-  OD_get_f32(OD_ENTRY_H60A1,0x13,&pid->homeError,true);
-  OD_get_f32(OD_ENTRY_H60A0,0x14,&pid->homeOffset,true);
-  OD_get_f32(OD_ENTRY_H60A0,0x15,&pid->homeSpeed,true);
+  OD_get_f32(OD_ENTRY_H60A1,0x14,&pid->homeError,true);
+  OD_get_f32(OD_ENTRY_H60A1,0x13,&pid->homeOffset,true);
+  OD_get_f32(OD_ENTRY_H60A1,0x15,&pid->homeSpeed,true);
+  OD_get_f32(OD_ENTRY_H60A1,0x16,&pid->joystickScale,true);
   // convert degree setting to radian
-  pid->pos.input_range.min *= DEG2RAD;
-  pid->pos.input_range.max *= DEG2RAD;
-  pid->pos.input_range.offset *= DEG2RAD;
+//  pid->pos.input_range.min *= DEG2RAD;
+//  pid->pos.input_range.max *= DEG2RAD;
+//  pid->pos.input_range.offset *= DEG2RAD;
 
-  pid->pos.input_range.min -= PI;
-  pid->pos.input_range.max -= PI;
+  // el range [-180,+180], do not subtract PI
+  //pid->pos.input_range.min -= PI;
+  //pid->pos.input_range.max -= PI;
   //pid->pos.input_range.offset -= PI;
 
-  if(pid->pos.input_range.min > -PI){
+//  if(pid->pos.input_range.min > -PI*0.99){
+  if(pid->pos.input_range.min > -180){
     pid->pos.input_range.clipped = true;
   }
-  if(pid->pos.input_range.max < PI){
+//  if(pid->pos.input_range.max < PI*0.99){
+  if(pid->pos.input_range.max < 180){
     pid->pos.input_range.clipped = true;
   }
   
@@ -795,7 +851,7 @@ static void load_pid_param_ex()
     pid->pos.cal.sp = 0.;
     pid->pos.cal.out = 0.;
     pid->pos.cal.err = 0.;
-    pid->pos.getPv = resolver_get_position;
+    pid->pos.getPv = resolver_get_position_deg;
     pid->pos.getSp = NULL;
     pid->pos.clamp = NULL;
     pid->pos.driveOutput = 0; 
@@ -821,9 +877,10 @@ static void load_pid_param_ex()
     OD_get_u8(OD_ENTRY_H2005,0x07,&pid->controlMap.servo_en[1],true);
     OD_get_u8(OD_ENTRY_H2005,0x08,&pid->controlMap.servo_on[1],true);
     OD_get_u8(OD_ENTRY_H2005,0x11,&pid->controlMap.controlMode,true);
-    OD_get_u8(OD_ENTRY_H2005,0x0B,&stow->lock_control,true);
-    OD_get_u8(OD_ENTRY_H2005,0x0C,&stow->unlock_control,true);
-#endif
+    OD_get_u8(OD_ENTRY_H2005,0x09,&stow->pwr_control,true);
+    OD_get_u8(OD_ENTRY_H2005,0x0A,&stow->dir_control,true);
+    OD_get_u8(OD_ENTRY_H2005,0x0B,&stow->axis_select,true);
+#endif // entry H2005
 #ifdef OD_ENTRY_H2006
     OD_get_u8(OD_ENTRY_H2006,0x03,&stow->lock_sense,true);
     OD_get_u8(OD_ENTRY_H2006,0x04,&stow->unlock_sense,true);
@@ -831,14 +888,14 @@ static void load_pid_param_ex()
     OD_get_u8(OD_ENTRY_H2006,0x08,&pid->controlMap.servo_rdy[1],true);
     pid->controlMap.stow_lock_sense = stow->lock_sense;
     pid->controlMap.stow_unlock_sense = stow->unlock_sense;
-#endif
+#endif // entry H2006
     
 #ifdef OD_ENTRY_H2007
     OD_get_u8(OD_ENTRY_H2007,0x03,&pid->controlMap.servo_cmd[0],true);
     OD_get_u8(OD_ENTRY_H2007,0x04,&pid->controlMap.servo_cmd[1],true);
-    OD_get_u8(OD_ENTRY_H2007,0x05,&pid->controlMap.pv_pos,true);
-    OD_get_u8(OD_ENTRY_H2007,0x05,&pid->controlMap.pv_spd,true);
-#endif    
+    OD_get_u8(OD_ENTRY_H2007,0x06,&pid->controlMap.pv_pos,true);
+    OD_get_u8(OD_ENTRY_H2007,0x06,&pid->controlMap.pv_spd,true);
+#endif   // entry H2007 
 
 //    pid->controlMap.pv_pos = 0;
 //    pid->controlMap.pv_spd = 0;
@@ -858,9 +915,12 @@ static void load_pid_param_ex()
     OD_get_u32(OD_ENTRY_H6000,0x09,&stow->idledelay_ms,true);
     OD_get_u32(OD_ENTRY_H6000,0x06,&pid->validMask,true);
     OD_get_u32(OD_ENTRY_H6000,0x08,&pid->homeMethod,true);
+    OD_get_u32(OD_ENTRY_H6000,0x0B,&pid->stowStableTime,true);
+    OD_get_u32(OD_ENTRY_H6000,0x0C,&pid->stowStableTimeout,true);
+    OD_get_u32(OD_ENTRY_H6000,0x0A,&stow->switchDelayTime,true);
 #endif
     pid->stowConfig = stow;
-#endif
+#endif // entry H60A1
     
  // runTime.stow_control_enable = false;
   
@@ -1241,6 +1301,12 @@ static THD_FUNCTION(procApp,p)
   chVTObjectInit(&runTime.vtUpdate);
   chVTSetI(&runTime.vtUpdate,TIME_MS2I(100),updateTimer,NULL);
   
+  chVTObjectInit(&runTime.vtRequestTPDO);
+  if(runTime.tpdoUpdateInterval < 5){
+    runTime.tpdoUpdateInterval = 5;
+  }
+  chVTSetI(&runTime.vtUpdate,TIME_MS2I(runTime.tpdoUpdateInterval),requestTPDO,NULL);
+
   issueStatusUpdate(true);  
   while(!_stop)
   {
@@ -1274,6 +1340,9 @@ static THD_FUNCTION(procApp,p)
     if(evt & EV_UPDATE){
       issueStatusUpdate(true);
     }
+    if(evt & EV_REQUEST_TPDO){
+      OD_requestTPDO(runTime.cosFlags.pvFlag,1);
+    }
     if(evt & EV_ADC_ACQUIRED){
       // update adc data 
       int32_t buffer[AD76_NOF_CHANNEL];
@@ -1295,20 +1364,20 @@ static THD_FUNCTION(procApp,p)
     if(evt & EV_RESOLVER_ACQUIRED){
       float fv;
       od = OD_find(OD,0x6064);
-      fv = (resolver_get_position(0));
-      if(fv < 0) fv += PIMUL2;
-      fv *= RAD2DEG;
+      fv = (resolver_get_position_deg(0)+180.);
+//      if(fv < 0) fv += PIMUL2;
+      //fv *= RAD2DEG;
       OD_set_f32(od,1,fv,true);
       fv = resolver_get_speed(0);
       OD_set_f32(od,2,fv,true);
       
-      fv = resolver_get_position(1)*RAD2DEG;
+      fv = resolver_get_position_deg(1);
       OD_set_f32(od,3,fv,true);
       fv = resolver_get_speed(1);
       OD_set_f32(od,4,fv,true);
       
-      OD_requestTPDO(runTime.cosFlags.pvFlag,1);
-      OD_requestTPDO(runTime.cosFlags.pvFlag,2);
+      //OD_requestTPDO(runTime.cosFlags.pvFlag,1);
+      //OD_requestTPDO(runTime.cosFlags.pvFlag,2);
       //OD_requestTPDO(runTime.cosFlags.pvFlag,3);
       //OD_requestTPDO(runTime.cosFlags.pvFlag,4);
 
@@ -1382,8 +1451,8 @@ static THD_FUNCTION(procApp,p)
     if(evt & EV_STOW_CONTROL){
       //runTime.stowControl.axisId = runTime.pidAZ.axisId;
       //validStow(runTime.stowCommand,&runTime.stowControl);
-
-      nested_pid_stow_control(runTime.stow_control_enable);
+      runTime.activeStowAxis = AXIS_AZ;
+      nested_pid_stow_control(runTime.stow_control_enable,runTime.activeStowAxis);
       if(runTime.stow_control_enable){
 //        load_pid_param_ex();
 //        if(runTime.stowConfig[0].activity == STOW_GO_LOCK){
@@ -1406,17 +1475,17 @@ static THD_FUNCTION(procApp,p)
     }
     
     if(evt & EV_STOW_UPDATE){
-        if(runTime.stowConfig[0].activity == STOW_GO_LOCK){
-          updateStatus(STA_MC_AZ_STOW_LOCK_IN_PROGRESS,1);
+        if(runTime.stowConfig[runTime.activeStowAxis].activity == STOW_GO_LOCK){
+          if(runTime.activeStowAxis == AXIS_AZ)
+            updateStatus(STA_MC_AZ_STOW_LOCK_IN_PROGRESS,1);
+          else if(runTime.activeStowAxis == AXIS_EL)
+            updateStatus(STA_MC_EL_STOW_LOCK_IN_PROGRESS,1);
         }
-        else if(runTime.stowConfig[0].activity == STOW_GO_UNLOCK){
-          updateStatus(STA_MC_AZ_STOW_UNLOCK_IN_PROGRESS,1);
-        }
-        if(runTime.stowConfig[1].activity == STOW_GO_LOCK){
-          updateStatus(STA_MC_EL_STOW_LOCK_IN_PROGRESS,1);
-        }
-        else if(runTime.stowConfig[1].activity == STOW_GO_UNLOCK){
-          updateStatus(STA_MC_EL_STOW_UNLOCK_IN_PROGRESS,1);
+        else if(runTime.stowConfig[runTime.activeStowAxis].activity == STOW_GO_UNLOCK){
+          if(runTime.activeStowAxis == AXIS_AZ)
+            updateStatus(STA_MC_AZ_STOW_UNLOCK_IN_PROGRESS,1);
+          else if(runTime.activeStowAxis == AXIS_EL)
+            updateStatus(STA_MC_EL_STOW_UNLOCK_IN_PROGRESS,1);
         }
     }
        
@@ -1427,36 +1496,45 @@ static THD_FUNCTION(procApp,p)
       //sysValidStow(runTime.stowCommand,&runTime.pidAZ);
       //runTime.stowValidState = 0;
       if(runTime.stowConfig[AXIS_AZ].state != STOW_PROCESSING){
+      }
+      if(runTime.stowConfig[AXIS_EL].state != STOW_PROCESSING){
+      }
+      if(runTime.activeStowAxis == AXIS_AZ){
         updateStatus(STA_MC_STOW_AZ_ERROR,0);
         updateStatus(STA_MC_AZ_STOW_LOCK_IN_PROGRESS,0);
         updateStatus(STA_MC_AZ_STOW_UNLOCK_IN_PROGRESS,0);
+        // stop AZ and start EL
+        nested_pid_stow_control(false, runTime.activeStowAxis);
+        runTime.activeStowAxis = AXIS_EL;
+        nested_pid_stow_control(runTime.stow_control_enable, runTime.activeStowAxis);
       }
-      if(runTime.stowConfig[AXIS_EL].state != STOW_PROCESSING){
+      else if(runTime.activeStowAxis == AXIS_EL){
         updateStatus(STA_MC_STOW_EL_ERROR,0);
         updateStatus(STA_MC_EL_STOW_LOCK_IN_PROGRESS,0);
         updateStatus(STA_MC_EL_STOW_UNLOCK_IN_PROGRESS,0);
+        runTime.activeStowAxis = 0xFF;
+        nested_pid_stow_control(false, runTime.activeStowAxis);
       }
-      nested_pid_stow_control(false);
     }
        
     if(evt & EV_STOW_ACTION_FAIL){
       //sysValidStow(runTime.stowCommand,&runTime.pidEL);
       //runTime.stowValidState = 0;
-      if(runTime.stowConfig[AXIS_AZ].state != STOW_PROCESSING ){
+      if(runTime.activeStowAxis == AXIS_AZ){
         updateStatus(STA_MC_STOW_AZ_ERROR,1);
         updateStatus(STA_MC_AZ_STOW_LOCK_IN_PROGRESS,0);
         updateStatus(STA_MC_AZ_STOW_UNLOCK_IN_PROGRESS,0);
         //updateStatus(STA_MC_AZ_STOW_LOCKD,0);
         //updateStatus(STA_MC_AZ_STOW_UNLOCKD,0);
       }
-      if(runTime.stowConfig[AXIS_EL].state != STOW_PROCESSING){
+      else if(runTime.activeStowAxis == AXIS_EL){
         updateStatus(STA_MC_STOW_EL_ERROR,1);
         updateStatus(STA_MC_EL_STOW_LOCK_IN_PROGRESS,0);
         updateStatus(STA_MC_EL_STOW_UNLOCK_IN_PROGRESS,0);
         //updateStatus(STA_MC_EL_STOW_LOCKD,0);
         //updateStatus(STA_MC_EL_STOW_UNLOCKD,0);
       }
-      nested_pid_stow_control(false);
+      nested_pid_stow_control(false,runTime.activeStowAxis);
     }
     
     if(evt & EV_PID_AZ_RDY){
@@ -1615,6 +1693,7 @@ static void load_canopen_params()
 
 static msg_t reset_canopen(void *p)
 {
+  msg_t ret = MSG_OK;
   uint32_t errInfo = 0;
   // initialize new instance of CANOpen */
   pCORunTime = &runTime;
@@ -1717,6 +1796,7 @@ static msg_t reset_canopen(void *p)
 #if (CO_CONFIG_STORAGE_ENABLE) & CO_CONFIGURE_STORAGE_ENABLE
     if(storageInitError != 0){
       CO_errorReport(runTime.CO->em, CO_EM_NON_VOLATILE_MEMORY, CO_EMC_HARDWARE,storageInitError);
+      ret = MSG_RESET;
       //runTime.appAutoStart = false;
     }
 #endif
@@ -1732,7 +1812,7 @@ static msg_t reset_canopen(void *p)
   runTime.nmt_reset_cmd = CO_RESET_NOT;
 
   
-  return MSG_OK;
+  return ret;
 }
 
 static THD_WORKING_AREA(waCO,1024);
@@ -1761,10 +1841,11 @@ static THD_FUNCTION(procCO,p)
   //chVTSet(&runTime.vt_periodic,TIME_MS2I(1),co_periodic_poll,NULL);
   
   bool appParamLoaded = false;
+  bool canStateOk = false;
   while(!stop){
     
     if(runTime.nmt_reset_cmd == CO_RESET_COMM){
-      reset_canopen(p);
+      canStateOk = (reset_canopen(p) == MSG_OK);
       runTime.nmt_reset_cmd = CO_RESET_NOT;
     }
     
@@ -1796,7 +1877,7 @@ static THD_FUNCTION(procCO,p)
     }  
       
       if(runTime.appAutoStart){
-        if(!runTime.appStarted){
+        if(!runTime.appStarted && canStateOk){
           start_app();
         }
       }
@@ -1892,13 +1973,14 @@ void task_canopen_init()
   time, AZ_POS_SP, AZ_POS_PV, AZ_SPD_SP,AZ_SPD_PV, AZ_M1,AZ_M2, \ 
         EL_POS_SP, EL_POS_PV, EL_SPD_SP,EL_SPD_PV, EL_M1,EL_M2,
 */
-
+/* todo: add unit in header */
 static void sys_log_header()
 {
-  char msg[128];
+  char msg[512];
   char *ptr = msg;
-  ptr += chsnprintf(ptr,128,"TIME,AZ_POS_SP,AZ_POS_PV,AZ_SPD_SP,AZ_SPD_PV,AZ_M1,AZ_M2,");
-  ptr += chsnprintf(ptr,128,"EL_POS_SP,EL_POS_PV,EL_SPD_SP,EL_SPD_PV,EL_M1,EL_M2\n");
+  ptr += chsnprintf(ptr,256,"TIME,");
+  ptr += chsnprintf(ptr,256,"AZ_POS_SP(DEG),AZ_POS_PV(DEG),AZ_POS_ERR(DEG),AZ_POS_OUT(DEG),AZ_SPD_SP(DPS),AZ_SPD_PV(DPS),AZ_SPD_ERR(DPS),AZ_M1(VDC),AZ_M2(VDC),");
+  ptr += chsnprintf(ptr,256,"EL_POS_SP(DEG),EL_POS_PV(DEG),EL_POS_ERR(DEG),EL_POS_OUT(DEG),EL_SPD_SP(DPS),EL_SPD_PV(DPS),EL_SPD_ERR(DPS),EL_M1(VDC),EL_M2(VDC)\n");
   chprintf((BaseSequentialStream*)&CONSOLE,msg);
   
 }
@@ -1908,21 +1990,23 @@ static void sys_logEx(_nested_pid_t *pid)
   _nested_pid_t *az = (_nested_pid_t *)&pid[0];
   _nested_pid_t *el = (_nested_pid_t *)&pid[1];
   
-  char msg[128];
+  char msg[512];
   int32_t adv[8];
-  uint16_t dav[4];
-  analot_output_get_raw(0xff,dav);
+//  uint16_t dav[4];
+//  analot_output_get_raw(0xff,dav);
 
   char *ptr = msg;
   systime_t now = chVTGetSystemTime();
-  ptr += chsnprintf(ptr,128,"%ul,", TIME_I2MS(now));
-  ptr += chsnprintf(ptr,128,"%5.2f,%5.2f,",az->pos.cal.sp,az->pos.cal.pv);
-  ptr += chsnprintf(ptr,128,"%5.2f,%5.2f,",az->spd.cal.sp,az->spd.cal.pv);
-  ptr += chsnprintf(ptr,128,"%d,%d,",dav[0],dav[1]);
+  ptr += chsnprintf(ptr,128,"%u,", TIME_I2MS(now));
+  ptr += chsnprintf(ptr,128,"%8.5f,%8.5f,%8.5f,",az->pos.cal.sp,az->pos.cal.pv,az->pos.cal.err);
+  ptr += chsnprintf(ptr,128,"%8.5f,",az->pos.cal.out);
+  ptr += chsnprintf(ptr,128,"%8.5f,%8.5f,%8.5f,",az->spd.cal.sp,az->spd.cal.pv,az->spd.cal.err);
+  ptr += chsnprintf(ptr,128,"%8.5f,%8.5f,",runTime.pidConfig[0].spd.driveOutput,runTime.pidConfig[0].spd.driveOutput);
   
-  ptr += chsnprintf(ptr,128,"%5.2f,%5.2f,",el->pos.cal.sp,el->pos.cal.pv);
-  ptr += chsnprintf(ptr,128,"%5.2f,%5.2f,",el->spd.cal.sp,el->spd.cal.pv);
-  ptr += chsnprintf(ptr,128,"%d,%d\n",dav[2],dav[3]);
+  ptr += chsnprintf(ptr,128,"%8.5f,%8.5f,%8.5f,",el->pos.cal.sp,el->pos.cal.pv,el->pos.cal.err);
+  ptr += chsnprintf(ptr,128,"%8.5f,",az->pos.cal.out);
+  ptr += chsnprintf(ptr,128,"%8.5f,%8.5f,%8.5f,",el->spd.cal.sp,el->spd.cal.pv,el->spd.cal.err);
+  ptr += chsnprintf(ptr,128,"%8.5f,%8.5f\n",runTime.pidConfig[1].spd.driveOutput,runTime.pidConfig[1].spd.driveOutput);
 //  analog_input_read(0xff,adv);
 //  ptr += chsnprintf(ptr,128,"%d,%d,%d,%d,",adv[0],adv[1],adv[2],adv[3]);
 //  ptr += chsnprintf(ptr,128,"%d,%d,%d,%d,",dav[0],dav[1],dav[2],dav[3]);

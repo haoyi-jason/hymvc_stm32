@@ -10,9 +10,11 @@
 //static const float VEL_LSB[] = {4.88,0.488,0.06,0.004}; // rps
 
 static const float POS_LSB[] = {360./1024.,360./4096.,360./16384.,360./65536.}; // degree
-static const float VEL_LSB[] = {4.88*60,0.488*60,0.06*60,0.004*60}; // rpm
+//static const float VEL_LSB[] = {4.88,0.488,0.06,0.004}; // rps
+static const float VEL_LSB[] = {4.88*180/PI,0.488*180/PI,0.06*180/PI,0.004*180/PI}; // deg/sec
 
 static const float RAD_LSB[] = {2*PI/1024.,2*PI/4096.,2*PI/16384.,2*PI/65536.}; // rad
+//static const float RAD_LSB[] = {360/1024.,360/4096.,360/16384.,360/65536.}; // degree
 
 static void fsync_trigger(AD2S1210Driver *dev);
 static void delay(uint32_t n);

@@ -710,7 +710,7 @@
                 </option>
                 <option>
                     <name>OOCOutputFile</name>
-                    <state>STM32_21008.hex</state>
+                    <state>STM32_21008_xxxxxxxx.hex</state>
                 </option>
                 <option>
                     <name>OOCCommandLineProducer</name>
@@ -718,7 +718,7 @@
                 </option>
                 <option>
                     <name>OOCObjCopyEnable</name>
-                    <state>0</state>
+                    <state>1</state>
                 </option>
             </data>
         </settings>
@@ -18111,34 +18111,34 @@
                 <group>
                     <name>301</name>
                     <file>
-                        <name>$PROJ_DIR$\source\CANopenNode\301\CO_config.h</name>
+                        <name>$PROJ_DIR$\source\canopennode\301\CO_config.h</name>
                     </file>
                     <file>
-                        <name>$PROJ_DIR$\source\CANopenNode\301\co_driver.h</name>
+                        <name>$PROJ_DIR$\source\canopennode\301\CO_driver.h</name>
                     </file>
                     <file>
                         <name>$PROJ_DIR$\source\CANopenNode\301\CO_Emergency.c</name>
                     </file>
                     <file>
-                        <name>$PROJ_DIR$\source\CANopenNode\301\CO_Emergency.h</name>
+                        <name>$PROJ_DIR$\source\canopennode\301\CO_Emergency.h</name>
                     </file>
                     <file>
                         <name>$PROJ_DIR$\source\CANopenNode\301\CO_fifo.c</name>
                     </file>
                     <file>
-                        <name>$PROJ_DIR$\source\CANopenNode\301\CO_fifo.h</name>
+                        <name>$PROJ_DIR$\source\canopennode\301\CO_fifo.h</name>
                     </file>
                     <file>
                         <name>$PROJ_DIR$\source\CANopenNode\301\CO_HBconsumer.c</name>
                     </file>
                     <file>
-                        <name>$PROJ_DIR$\source\CANopenNode\301\CO_HBconsumer.h</name>
+                        <name>$PROJ_DIR$\source\canopennode\301\CO_HBconsumer.h</name>
                     </file>
                     <file>
                         <name>$PROJ_DIR$\source\CANopenNode\301\CO_NMT_Heartbeat.c</name>
                     </file>
                     <file>
-                        <name>$PROJ_DIR$\source\CANopenNode\301\CO_NMT_Heartbeat.h</name>
+                        <name>$PROJ_DIR$\source\canopennode\301\CO_NMT_Heartbeat.h</name>
                     </file>
                     <file>
                         <name>$PROJ_DIR$\source\CANopenNode\301\CO_ODinterface.c</name>
@@ -18150,31 +18150,31 @@
                         <name>$PROJ_DIR$\source\CANopenNode\301\CO_PDO.c</name>
                     </file>
                     <file>
-                        <name>$PROJ_DIR$\source\CANopenNode\301\CO_PDO.h</name>
+                        <name>$PROJ_DIR$\source\canopennode\301\CO_PDO.h</name>
                     </file>
                     <file>
                         <name>$PROJ_DIR$\source\CANopenNode\301\CO_SDOclient.c</name>
                     </file>
                     <file>
-                        <name>$PROJ_DIR$\source\CANopenNode\301\CO_SDOclient.h</name>
+                        <name>$PROJ_DIR$\source\canopennode\301\CO_SDOclient.h</name>
                     </file>
                     <file>
                         <name>$PROJ_DIR$\source\CANopenNode\301\CO_SDOserver.c</name>
                     </file>
                     <file>
-                        <name>$PROJ_DIR$\source\CANopenNode\301\CO_SDOserver.h</name>
+                        <name>$PROJ_DIR$\source\canopennode\301\CO_SDOserver.h</name>
                     </file>
                     <file>
                         <name>$PROJ_DIR$\source\CANopenNode\301\CO_SYNC.c</name>
                     </file>
                     <file>
-                        <name>$PROJ_DIR$\source\CANopenNode\301\CO_SYNC.h</name>
+                        <name>$PROJ_DIR$\source\canopennode\301\CO_SYNC.h</name>
                     </file>
                     <file>
                         <name>$PROJ_DIR$\source\CANopenNode\301\CO_TIME.c</name>
                     </file>
                     <file>
-                        <name>$PROJ_DIR$\source\CANopenNode\301\CO_TIME.h</name>
+                        <name>$PROJ_DIR$\source\canopennode\301\CO_TIME.h</name>
                     </file>
                     <file>
                         <name>$PROJ_DIR$\source\CANopenNode\301\crc16-ccitt.c</name>
@@ -18189,25 +18189,25 @@
                         <name>$PROJ_DIR$\source\CANopenNode\303\CO_LEDs.c</name>
                     </file>
                     <file>
-                        <name>$PROJ_DIR$\source\CANopenNode\303\CO_LEDs.h</name>
+                        <name>$PROJ_DIR$\source\canopennode\303\CO_LEDs.h</name>
                     </file>
                 </group>
                 <group>
                     <name>305</name>
                     <file>
-                        <name>$PROJ_DIR$\source\CANopenNode\305\CO_LSS.h</name>
+                        <name>$PROJ_DIR$\source\canopennode\305\CO_LSS.h</name>
                     </file>
                     <file>
                         <name>$PROJ_DIR$\source\CANopenNode\305\CO_LSSmaster.c</name>
                     </file>
                     <file>
-                        <name>$PROJ_DIR$\source\CANopenNode\305\CO_LSSmaster.h</name>
+                        <name>$PROJ_DIR$\source\canopennode\305\CO_LSSmaster.h</name>
                     </file>
                     <file>
                         <name>$PROJ_DIR$\source\CANopenNode\305\CO_LSSslave.c</name>
                     </file>
                     <file>
-                        <name>$PROJ_DIR$\source\CANopenNode\305\CO_LSSslave.h</name>
+                        <name>$PROJ_DIR$\source\canopennode\305\CO_LSSslave.h</name>
                     </file>
                 </group>
                 <group>
@@ -18219,7 +18219,7 @@
                         <name>$PROJ_DIR$\source\CANopenNode\storage\CO_storage.c</name>
                     </file>
                     <file>
-                        <name>$PROJ_DIR$\source\CANopenNode\storage\CO_storage.h</name>
+                        <name>$PROJ_DIR$\source\CANopenNode\storage\co_storage.h</name>
                     </file>
                     <file>
                         <name>$PROJ_DIR$\source\CANopenNode\storage\CO_storageEeprom.c</name>
@@ -18229,10 +18229,10 @@
                     </file>
                 </group>
                 <file>
-                    <name>$PROJ_DIR$\source\CANopenNode\CANopen.c</name>
+                    <name>$PROJ_DIR$\source\canopennode\CANopen.c</name>
                 </file>
                 <file>
-                    <name>$PROJ_DIR$\source\CANopenNode\CANopen.h</name>
+                    <name>$PROJ_DIR$\source\canopennode\CANopen.h</name>
                 </file>
             </group>
         </group>

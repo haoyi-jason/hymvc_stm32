@@ -49,6 +49,7 @@ enum e_axis
 #define EV_EL_HOMESEARCHING     EVENT_MASK(23)
 #define EV_STOW_UPDATE         EVENT_MASK(24)
 #define EV_UPDATE                EVENT_MASK(25)
+#define EV_REQUEST_TPDO                EVENT_MASK(26)
 
 enum _SYSTEM_STATUS_MASK
 {

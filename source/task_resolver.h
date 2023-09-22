@@ -1,5 +1,9 @@
 #ifndef _TASK_RESOLVER_
 #define _TASK_RESOLVER_
+#include "arm_math.h"
+
+
+#define RAD2DEGG        180./PI
 
 // fault bits
 enum _FAULT_BITS{

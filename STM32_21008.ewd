@@ -773,7 +773,7 @@
                 </option>
                 <option>
                     <name>CCJLinkTCPIP</name>
-                    <state>aaa.bbb.ccc.ddd</state>
+                    <state>192.168.1.134</state>
                 </option>
                 <option>
                     <name>CCJLinkSpeedRadioV2</name>

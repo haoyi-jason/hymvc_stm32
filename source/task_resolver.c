@@ -188,7 +188,7 @@ float resolver_get_position(uint8_t id)
 float resolver_get_position_deg(uint8_t id)
 {
   if(id < 2){
-    return (ad2s1210[id].currentAngle * 0.016667f); 
+    return runTime.position[id].last*RAD2DEGG;
   }
   return 0.0f;
 }
