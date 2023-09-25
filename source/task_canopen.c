@@ -572,6 +572,13 @@ static void issueStatusUpdate(bool force)
 {
   if(force){
       OD_requestTPDO(runTime.cosFlags.statusFlag,0);
+#ifdef OD_ENTRY_H6300
+      uint16_t u16;
+      digital_get_iso_outw(0,&u16);
+      OD_set_u16(OD_ENTRY_H6300,1,u16,true);
+      OD_requestTPDO(runTime.cosFlags.doFlag,1);
+#endif
+      OD_requestTPDO(runTime.cosFlags.diFlag,1);
   }
   else{
     if(runTime.mcStatus_new != runTime.mcStatus){
@@ -1305,7 +1312,7 @@ static THD_FUNCTION(procApp,p)
   if(runTime.tpdoUpdateInterval < 5){
     runTime.tpdoUpdateInterval = 5;
   }
-  chVTSetI(&runTime.vtUpdate,TIME_MS2I(runTime.tpdoUpdateInterval),requestTPDO,NULL);
+  chVTSetI(&runTime.vtRequestTPDO,TIME_MS2I(runTime.tpdoUpdateInterval),requestTPDO,NULL);
 
   issueStatusUpdate(true);  
   while(!_stop)
@@ -1342,6 +1349,9 @@ static THD_FUNCTION(procApp,p)
     }
     if(evt & EV_REQUEST_TPDO){
       OD_requestTPDO(runTime.cosFlags.pvFlag,1);
+      OD_requestTPDO(runTime.cosFlags.pvFlag,2);
+      OD_requestTPDO(runTime.cosFlags.pvFlag,3);
+      OD_requestTPDO(runTime.cosFlags.pvFlag,4);
     }
     if(evt & EV_ADC_ACQUIRED){
       // update adc data 
@@ -1364,7 +1374,10 @@ static THD_FUNCTION(procApp,p)
     if(evt & EV_RESOLVER_ACQUIRED){
       float fv;
       od = OD_find(OD,0x6064);
-      fv = (resolver_get_position_deg(0)+180.);
+      fv = (resolver_get_position_deg(0));
+      if(fv < 0) {
+        fv += 360;
+      }
 //      if(fv < 0) fv += PIMUL2;
       //fv *= RAD2DEG;
       OD_set_f32(od,1,fv,true);
