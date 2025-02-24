@@ -183,6 +183,7 @@ static _storageModule_t storageModule = {
   2
 };
 
+/* clock = 42MHz for STM32F4 */
 static CANConfig cfg500K = {
   CAN_MCR_ABOM | CAN_MCR_AWUM | CAN_MCR_TXFP,
   CAN_BTR_BRP(5) | CAN_BTR_TS1(10) | CAN_BTR_TS2(1) | CAN_BTR_SJW(1)
@@ -1343,7 +1344,7 @@ static THD_FUNCTION(procApp,p)
 //      }
 //    }
     
-    eventmask_t evt = chEvtWaitAnyTimeout(ALL_EVENTS, TIME_MS2I(10));
+    eventmask_t evt = chEvtWaitAnyTimeout(ALL_EVENTS, TIME_MS2I(2));
     if(evt & EV_UPDATE){
       issueStatusUpdate(true);
     }
@@ -2017,7 +2018,7 @@ static void sys_logEx(_nested_pid_t *pid)
   ptr += chsnprintf(ptr,128,"%8.5f,%8.5f,",runTime.pidConfig[0].spd.driveOutput,runTime.pidConfig[0].spd.driveOutput);
   
   ptr += chsnprintf(ptr,128,"%8.5f,%8.5f,%8.5f,",el->pos.cal.sp,el->pos.cal.pv,el->pos.cal.err);
-  ptr += chsnprintf(ptr,128,"%8.5f,",az->pos.cal.out);
+  ptr += chsnprintf(ptr,128,"%8.5f,",el->pos.cal.out);
   ptr += chsnprintf(ptr,128,"%8.5f,%8.5f,%8.5f,",el->spd.cal.sp,el->spd.cal.pv,el->spd.cal.err);
   ptr += chsnprintf(ptr,128,"%8.5f,%8.5f\n",runTime.pidConfig[1].spd.driveOutput,runTime.pidConfig[1].spd.driveOutput);
 //  analog_input_read(0xff,adv);

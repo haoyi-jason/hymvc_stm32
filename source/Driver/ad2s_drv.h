@@ -30,6 +30,8 @@ enum _resolution{
   RES_16b
 };
 
+#define XTAL_FREQ       8192000
+
 
 
 
@@ -93,6 +95,7 @@ msg_t ad2S_init(AD2S1210Driver *dev, AD2S1210Config *config);
 msg_t ad2S_start(AD2S1210Driver *dev);
 msg_t ad2s_SetResolution(AD2S1210Driver *dev, uint8_t resolution);
 msg_t ad2s_SetMode(AD2S1210Driver *dev, uint8_t mode);
+void ad2s_InitConfig(AD2S1210Driver *dev);
 void ad2s_reset(AD2S1210Driver *dev);
 msg_t ad2S_Refresh(AD2S1210Driver *dev);
 #endif

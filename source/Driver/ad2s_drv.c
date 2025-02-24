@@ -188,6 +188,37 @@ static void normalRead(AD2S1210Driver *dev)
                       
 }
 
+static void normalRead_status(AD2S1210Driver *dev)
+{  
+  uint8_t *ptr;
+//  ptr = (uint8_t*)&dev->position;
+//  configRead(dev,0x80,ptr);
+//  ptr++;
+//  configRead(dev,0x81,ptr);
+//  memcpy((void*)&dev->pos_signed,(void*)&dev->position,2);
+  
+//  ptr = (uint8_t*)&dev->velocity;
+//  configRead(dev,0x82,ptr);
+//  ptr++;
+//  configRead(dev,0x83,ptr);
+  
+  configRead(dev,0x88,&dev->losThres);
+  configRead(dev,0x89,&dev->dosOver);
+  configRead(dev,0x8a,&dev->dosMismatch);
+  configRead(dev,0x8b,&dev->dosResetMax);
+  configRead(dev,0x8c,&dev->dosResetMin);
+  ptr = (uint8_t*)&dev->lot;
+  configRead(dev,0x8d,ptr);
+  ptr++;
+  configRead(dev,0x8e,ptr);
+
+//  configRead(dev,0x91,&dev->exci_freq);
+  //configWrite(dev,0x92,0x7f);
+//  configRead(dev,0x92,&dev->ctrl);
+  configRead(dev,0xff,&dev->fault);
+  
+}
+
 static void delay(uint32_t n)
 {
   uint32_t cntr = n;
@@ -237,7 +268,7 @@ void ad2s_read_registers(AD2S1210Driver *dev)
   configRead(dev,0x8e,ptr);
 
   configRead(dev,0x91,&dev->exci_freq);
-  configWrite(dev,0x92,0x7f);
+  //configWrite(dev,0x92,0x7f);
   configRead(dev,0x92,&dev->ctrl);
   configRead(dev,0xff,&dev->fault);
   
@@ -309,6 +340,7 @@ msg_t ad2S_start(AD2S1210Driver *dev)
     palSetPadMode(dev->config->port_wr,dev->config->line_wr, PAL_MODE_OUTPUT_PUSHPULL);
     palSetPad(dev->config->port_wr, dev->config->line_wr);
   }
+ 
 }
 
 msg_t ad2s_SetResolution(AD2S1210Driver *dev, uint8_t resolution)
@@ -360,6 +392,11 @@ msg_t ad2s_SetMode(AD2S1210Driver *dev, uint8_t mode)
   }
   return MSG_OK;
 }
+
+void ad2s_InitConfig(AD2S1210Driver *dev)
+{  
+  configWrite(dev,0x91,dev->exci_freq);
+}
 msg_t ad2s_direct_position(AD2S1210Driver *dev)
 {
   ad2s_SetMode(dev,NM_POSITION);
@@ -386,14 +423,15 @@ msg_t ad2S_Refresh(AD2S1210Driver *dev)
 {
   normalRead(dev);
   if(dev->config->reverse){
-    dev->currentAngle = 360-dev->position * POS_LSB[dev->config->resolution];
-    dev->currentSpeed = -dev->velocity * VEL_LSB[dev->config->resolution];
+    dev->currentAngle = (360.-dev->position * POS_LSB[dev->config->resolution]);
+    dev->currentSpeed = (-dev->velocity * VEL_LSB[dev->config->resolution]);
     dev->currentAngleRad = -dev->pos_signed*RAD_LSB[dev->config->resolution];
   }
   else{
-    dev->currentAngle = dev->position * POS_LSB[dev->config->resolution];
-    dev->currentSpeed = dev->velocity * VEL_LSB[dev->config->resolution];
+    dev->currentAngle = (dev->position * POS_LSB[dev->config->resolution]);
+    dev->currentSpeed = (dev->velocity * VEL_LSB[dev->config->resolution]);
     dev->currentAngleRad = dev->pos_signed*RAD_LSB[dev->config->resolution];
   }
+  //normalRead_status(dev);
   return MSG_OK;
 }

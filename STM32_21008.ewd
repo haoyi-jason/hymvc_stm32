@@ -22217,7 +22217,7 @@
         </debuggerPlugins>
     </configuration>
     <configuration>
-        <name>APP_ADCML</name>
+        <name>ATE_Port</name>
         <toolchain>
             <name>ARM</name>
         </toolchain>
@@ -22259,7 +22259,7 @@
                 </option>
                 <option>
                     <name>MemFile</name>
-                    <state></state>
+                    <state>$TOOLKIT_DIR$\CONFIG\debugger\ST\STM32F429IG.ddf</state>
                 </option>
                 <option>
                     <name>RunToEnable</name>
@@ -22299,11 +22299,11 @@
                 </option>
                 <option>
                     <name>OCDynDriverList</name>
-                    <state>ARMSIM_ID</state>
+                    <state>JLINK_ID</state>
                 </option>
                 <option>
                     <name>OCLastSavedByProductVersion</name>
-                    <state></state>
+                    <state>8.32.4.20866</state>
                 </option>
                 <option>
                     <name>UseFlashLoader</name>
@@ -22327,7 +22327,7 @@
                 </option>
                 <option>
                     <name>FlashLoadersV3</name>
-                    <state></state>
+                    <state>$TOOLKIT_DIR$\config\flashloader\ST\FlashSTM32F427xG.board</state>
                 </option>
                 <option>
                     <name>OCImagesSuppressCheck1</name>
@@ -22395,7 +22395,7 @@
                 </option>
                 <option>
                     <name>OCMulticoreNrOfCores</name>
-                    <state></state>
+                    <state>1</state>
                 </option>
                 <option>
                     <name>OCMulticoreMaster</name>
@@ -22988,7 +22988,7 @@
                 </option>
                 <option>
                     <name>CCJLinkTCPIP</name>
-                    <state>aaa.bbb.ccc.ddd</state>
+                    <state>192.168.1.134</state>
                 </option>
                 <option>
                     <name>CCJLinkSpeedRadioV2</name>
@@ -23041,12 +23041,12 @@
                 </option>
                 <option>
                     <name>CCJLinkInterfaceRadio</name>
-                    <state>0</state>
+                    <state>1</state>
                 </option>
                 <option>
                     <name>CCJLinkResetList</name>
                     <version>6</version>
-                    <state>5</state>
+                    <state>10</state>
                 </option>
                 <option>
                     <name>CCJLinkInterfaceCmdLine</name>
@@ -23111,7 +23111,7 @@
                 </option>
                 <option>
                     <name>CCCpuClockEdit</name>
-                    <state></state>
+                    <state>180.0</state>
                 </option>
                 <option>
                     <name>CCSwoClockAuto</name>
