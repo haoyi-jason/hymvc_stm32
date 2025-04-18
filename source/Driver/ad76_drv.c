@@ -77,13 +77,13 @@ static void drdy_handler(void *arg)
   AD7606Driver *dev = (AD7606Driver*)arg;
   chSysLockFromISR();
   //palClearPad(dev->config->port_stby,dev->config->pad_stby);
-  ad7606_disable_interrupt(dev);
+//  ad7606_disable_interrupt(dev);
   chEvtBroadcastFlagsI(&dev->ev_drdy,EVENT_MASK(0));
   chSysUnlockFromISR();
 }
 
 
-msg_t ad7606_init(AD7606Driver *dev, AD7606Config *config)
+msg_t ad7606_init(AD7606Driver *dev,const AD7606Config *config)
 {
   if(dev == NULL) return MSG_RESET;
   
@@ -151,6 +151,8 @@ msg_t ad7606_start(AD7606Driver *dev)
   
   // register busy line for falling edge trigger
   chEvtObjectInit(&dev->ev_drdy);
+  ad7606_disable_interrupt(dev);
+  ad7606_enable_interrupt(dev);
   
   // reset chip
   ad7606_reset(dev);
@@ -164,10 +166,15 @@ void ad7606_reset(AD7606Driver *dev)
   palClearPad(dev->config->port_rst,dev->config->pad_rst);
 }
 
+void ad7606_stop(AD7606Driver *dev)
+{
+  ad7606_disable_interrupt(dev);
+}
+
 void ad7606_start_conv(AD7606Driver *dev, uint8_t option)
 {
   //palSetPad(dev->config->port_stby,dev->config->pad_stby);
-  ad7606_enable_interrupt(dev);
+//  ad7606_enable_interrupt(dev);
   switch(option){
   case 1: // a only
     palClearPad(dev->config->port_convsta,dev->config->pad_convsta);

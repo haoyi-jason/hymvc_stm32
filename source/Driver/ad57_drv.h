@@ -63,11 +63,11 @@ typedef struct{
         uint8_t syncUpdate;
         
 struct AD57x4Driver{
-  AD57Config *config;
+  const AD57Config *config;
   _ad57_data
 };
 
-msg_t ad57_init(AD57x4Driver *dev, AD57Config *config);
+msg_t ad57_init(AD57x4Driver *dev,const  AD57Config *config);
 msg_t ad57_start(AD57x4Driver *dev);
 int8_t ad57_stop(AD57x4Driver *dev);
 int8_t ad57_set_simulataneous_update(AD57x4Driver *dev, uint8_t flag);

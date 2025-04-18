@@ -716,7 +716,7 @@ static void load_pid_param_ex()
     pid->pos.input_range.clipped = true;
   }
 //  if(pid->pos.input_range.max < PI*0.99){
-  if(pid->pos.input_range.max < 360){
+  if(pid->pos.input_range.min > 0){
     pid->pos.input_range.clipped = true;
   }
   
@@ -1974,9 +1974,9 @@ static THD_FUNCTION(thCanRx,p)
 
 void task_canopen_init()
 {
-  sdStart(&CONSOLE,&serialCfg);
+  //sdStart(&CONSOLE,&serialCfg);
   //chprintf(&CONSOLE,"Hello\n");
-  chThdCreateStatic(waShell, sizeof(waShell), NORMALPRIO, shellThread, (void *)&shell_cfg);
+  //chThdCreateStatic(waShell, sizeof(waShell), NORMALPRIO, shellThread, (void *)&shell_cfg);
 
   pCORunTime = &runTime;
   chThdCreateStatic(waCO,sizeof(waCO),NORMALPRIO,procCO,&CAND1);

@@ -4,6 +4,7 @@
 #include "ad76_drv.h"
 #include "app_config.h"
 
+
 #define EV_AD7606_RDY   EVENT_MASK(10)
 #define EV_AD7606_ACQ   EVENT_MASK(11)
 
@@ -29,7 +30,7 @@ static const SPIConfig spicfg_ad76 = {
   SPI_CR1_BR_1 | SPI_CR1_CPOL | SPI_CR1_CPHA
 };
 
-static AD7606Config ad7606config = {
+static const AD7606Config ad7606config = {
   &SPID5,
   &spicfg_ad76,
   GPIOF, // cs

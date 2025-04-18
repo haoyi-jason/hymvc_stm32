@@ -43,10 +43,10 @@ typedef struct{
   int32_t data[AD76_NOF_CHANNEL];
   
 struct AD7606Driver{
-  AD7606Config *config;
+  const AD7606Config *config;
   _ad7606_data
 };
 
 void ad7606_reset(AD7606Driver *dev);
-
+msg_t ad7606_init(AD7606Driver *dev,const AD7606Config *config);
 #endif

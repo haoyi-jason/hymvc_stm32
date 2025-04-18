@@ -69,7 +69,7 @@ static void registerWrite(AD57x4Driver *dev, uint8_t reg_adr, uint8_t *b, uint16
   
 }
 
-msg_t ad57_init(AD57x4Driver *dev, AD57Config *config)
+msg_t ad57_init(AD57x4Driver *dev,const AD57Config *config)
 {
   if(dev == NULL) return MSG_RESET;
   if(config == NULL) return MSG_RESET;
@@ -104,12 +104,14 @@ msg_t ad57_start(AD57x4Driver *dev)
     //palSetPad(dev->config->binport, dev->config->binline); // offset bin
   }
       
+  return 0;
       
 }
 
 int8_t ad57_stop(AD57x4Driver *dev)
 {
   
+  return 0;
   
 }
 
@@ -148,6 +150,7 @@ int8_t ad57_set_dac(AD57x4Driver *dev, uint8_t ch)
       registerWrite(dev,AD57_REG(REG_DATA) | AD57_DAC(ch),(uint8_t*)&dev->data[ch],2);
       registerRead(dev, AD57_REG(REG_DATA) | AD57_DAC(ch),(uint8_t*)&rb,2);
   }
+  return 0;
 }
 
 int8_t ad57_get_corse_gain(AD57x4Driver *dev, uint8_t ch)
@@ -160,6 +163,7 @@ int8_t ad57_get_corse_gain(AD57x4Driver *dev, uint8_t ch)
   else{
       registerRead(dev,AD57_REG(REG_CORSE_GAIN) | AD57_DAC(ch),(uint8_t*)&dev->corse_gain[ch],2);
   }
+  return 0;
 }
 
 int8_t ad57_set_corse_gain(AD57x4Driver *dev, uint8_t ch)
@@ -172,6 +176,7 @@ int8_t ad57_set_corse_gain(AD57x4Driver *dev, uint8_t ch)
   else{
       registerWrite(dev,AD57_REG(REG_CORSE_GAIN) | AD57_DAC(ch),(uint8_t*)&dev->corse_gain[ch],2);
   }
+  return 0;
 }
 
 int8_t ad57_get_fine_gain(AD57x4Driver *dev)
@@ -187,6 +192,7 @@ int8_t ad57_get_fine_gain(AD57x4Driver *dev)
 //  else{
 //      registerRead(dev,AD57_REG(REG_FINE_GAIN) | AD57_DAC(ch),&dev->fine_gain[i]);
 //  }
+  return 0;
 }
 
 int8_t ad57_set_fine_gain(AD57x4Driver *dev, uint8_t ch)
@@ -202,6 +208,7 @@ int8_t ad57_set_fine_gain(AD57x4Driver *dev, uint8_t ch)
 //  else{
 //      registerWrite(dev,AD57_REG(REG_FINE_GAIN) | AD57_DAC(ch),&dev->fine_gain[i]);
 //  }
+  return 0;
 }
 
 int8_t ad57_get_offset(AD57x4Driver *dev)
@@ -217,6 +224,7 @@ int8_t ad57_get_offset(AD57x4Driver *dev)
 //  else{
 //      registerRead(dev,AD57_REG(REG_OFFSET) | AD57_DAC(ch),&dev->offset[i]);
 //  }
+  return 0;
 }
 
 int8_t ad57_set_offset(AD57x4Driver *dev, uint8_t ch)
@@ -232,4 +240,5 @@ int8_t ad57_set_offset(AD57x4Driver *dev, uint8_t ch)
 //  else{
 //      registerWrite(dev,AD57_REG(REG_OFFSET) | AD57_DAC(ch),&dev->offset[i]);
 //  }
+  return 0;
 }

@@ -3,6 +3,7 @@
 #include "task_dac.h"
 #include "ad57_drv.h"
 #include "app_config.h"
+#include "database.h"
 
 #define EV_UPDATE_DAC   EVENT_MASK(0)
 #define EV_PERIODIC     EVENT_MASK(1)
@@ -28,7 +29,7 @@ static const SPIConfig spicfg_ad57 = {
   SPI_CR1_BR_2 |  SPI_CR1_CPHA
 };
 
-static AD57Config ad57config = {
+static const AD57Config ad57config = {
   &SPID4,
   &spicfg_ad57,
   GPIOE, // sync
@@ -51,7 +52,7 @@ static void ad57_to(void *arg)
   chSysUnlockFromISR();
 }
 
-static THD_WORKING_AREA(waAD57,1024);
+static THD_WORKING_AREA(waAD57,256);
 static THD_FUNCTION(procAD57 ,p)
 {
   _dac_config *config = (_dac_config*)p;
@@ -96,6 +97,7 @@ static THD_FUNCTION(procAD57 ,p)
           if(runTime.updateChannelMask & (1<<i)){
             ad57_set_dac(runTime.ad57,i);
             runTime.updateChannelMask &= ~(1<<i); // clear
+            db_write_live_data(LIVDDATA_SECTION_ANALOG_OUT,LIVEDATA_VOUT_RAW_CH0+i,(void*)&runTime.ad57->data[i]);
           }
         }
       }

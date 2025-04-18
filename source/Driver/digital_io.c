@@ -398,7 +398,7 @@ void digital_init()
 {
   pRunTime = &runTime;  
   runTime.main = chRegFindThreadByName("MAIN");
-  runTime.self = chThdCreateStatic(waDIO,sizeof(waDIO),NORMALPRIO,procDIO,NULL);
+  runTime.self = chThdCreateStatic(waDIO,sizeof(waDIO),NORMALPRIO-1,procDIO,NULL);
   chSysLock();
   chThdSuspendS(&runTime.ref);
   chSysUnlock();

@@ -153,4 +153,10 @@ typedef struct{
   uint16_t fine_gain[AD57_CHANNELS];    // OD 2101
   uint16_t offset[AD57_CHANNELS];       // OD 2102        
 }_dac_config;
+
+typedef struct{
+  uint16_t corse_gain;
+  uint16_t fine_gain;
+  uint16_t offset;
+}_dac_channel_config_t;
 #endif

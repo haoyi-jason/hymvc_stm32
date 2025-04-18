@@ -20004,20 +20004,20 @@
                         <name>$PROJ_DIR$\source\CANopenNode\storage\CO_storage.c</name>
                     </file>
                     <file>
-                        <name>$PROJ_DIR$\source\CANopenNode\storage\co_storage.h</name>
+                        <name>$PROJ_DIR$\source\CANopenNode\storage\CO_storage.h</name>
                     </file>
                     <file>
                         <name>$PROJ_DIR$\source\CANopenNode\storage\CO_storageEeprom.c</name>
                     </file>
                     <file>
-                        <name>$PROJ_DIR$\source\CANopenNode\storage\co_storageEeprom.h</name>
+                        <name>$PROJ_DIR$\source\CANopenNode\storage\CO_storageEeprom.h</name>
                     </file>
                 </group>
                 <file>
                     <name>$PROJ_DIR$\source\canopennode\CANopen.c</name>
                 </file>
                 <file>
-                    <name>$PROJ_DIR$\source\CANopenNode\CANopen.h</name>
+                    <name>$PROJ_DIR$\source\canopennode\CANopen.h</name>
                 </file>
             </group>
         </group>
@@ -20339,6 +20339,12 @@
                 <name>$extsource$\ylib\numeric\Filters\cmsis_fir.h</name>
             </file>
             <file>
+                <name>$extsource$\ylib\encryption\crc16\crc16-ccitt.c</name>
+            </file>
+            <file>
+                <name>$extsource$\ylib\encryption\crc16\crc16-ccitt.h</name>
+            </file>
+            <file>
                 <name>$extsource$\ylib\numeric\Filters\iir.c</name>
             </file>
             <file>
@@ -20355,6 +20361,12 @@
             <name>$PROJ_DIR$\source\can_frame_handler.h</name>
         </file>
         <file>
+            <name>$PROJ_DIR$\source\database.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\source\database.h</name>
+        </file>
+        <file>
             <name>$PROJ_DIR$\source\main.c</name>
         </file>
         <file>
@@ -20362,6 +20374,18 @@
         </file>
         <file>
             <name>$PROJ_DIR$\source\task_analog_input.h</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\source\task_baseOperation.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\source\task_baseoperation.h</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\source\task_can1.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\source\task_can1.h</name>
         </file>
         <file>
             <name>$PROJ_DIR$\source\task_canopen.c</name>
