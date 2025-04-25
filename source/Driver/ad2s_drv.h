@@ -86,12 +86,12 @@ typedef struct{
   float currentAngleRad;
 
 struct AD2S1210Driver{
-  AD2S1210Config *config;
+  const AD2S1210Config *config;
   _ad2s_data
 };
 
 static void sample_trigger(AD2S1210Driver *dev);
-msg_t ad2S_init(AD2S1210Driver *dev, AD2S1210Config *config);
+msg_t ad2S_init(AD2S1210Driver *dev,const  AD2S1210Config *config);
 msg_t ad2S_start(AD2S1210Driver *dev);
 msg_t ad2s_SetResolution(AD2S1210Driver *dev, uint8_t resolution);
 msg_t ad2s_SetMode(AD2S1210Driver *dev, uint8_t mode);

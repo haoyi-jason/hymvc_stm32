@@ -6,6 +6,7 @@
 #include "app_config.h"
 #include <arm_math.h>
 #include "ylib/numeric/filters/cmsis_fir.h"
+#include "ylib/numeric/filters/mid_of_three.h"
 
 //#define EV_UPDATE   EVENT_MASK(0)
 #define EV_PERIODIC     EVENT_MASK(1)
@@ -188,20 +189,20 @@ static float32_t filter_taps[FILTER_TAP_NUM] = {
 
 
 // fir dataset
-float32_t az_pos_sin_input[FILTER_TAP_NUM];
-float32_t az_pos_cos_input[FILTER_TAP_NUM];
-float32_t el_pos_sin_input[FILTER_TAP_NUM];
-float32_t el_pos_cos_input[FILTER_TAP_NUM];
-float32_t az_pos_sin_output[FILTER_TAP_NUM + 2*FILTER_BLOCK_SZ-1];
-float32_t az_pos_cos_output[FILTER_TAP_NUM + 2*FILTER_BLOCK_SZ-1];
-float32_t el_pos_sin_output[FILTER_TAP_NUM + 2*FILTER_BLOCK_SZ-1];
-float32_t el_pos_cos_output[FILTER_TAP_NUM + 2*FILTER_BLOCK_SZ-1];
+//float32_t az_pos_sin_input[FILTER_TAP_NUM];
+//float32_t az_pos_cos_input[FILTER_TAP_NUM];
+//float32_t el_pos_sin_input[FILTER_TAP_NUM];
+//float32_t el_pos_cos_input[FILTER_TAP_NUM];
+//float32_t az_pos_sin_output[FILTER_TAP_NUM + 2*FILTER_BLOCK_SZ-1];
+//float32_t az_pos_cos_output[FILTER_TAP_NUM + 2*FILTER_BLOCK_SZ-1];
+//float32_t el_pos_sin_output[FILTER_TAP_NUM + 2*FILTER_BLOCK_SZ-1];
+//float32_t el_pos_cos_output[FILTER_TAP_NUM + 2*FILTER_BLOCK_SZ-1];
 
 
-float32_t az_spd_input[FILTER_TAP_NUM];
-float32_t el_spd_input[FILTER_TAP_NUM];
-float32_t az_spd_output[FILTER_TAP_NUM + 2*FILTER_BLOCK_SZ-1];
-float32_t el_spd_output[FILTER_TAP_NUM + 2*FILTER_BLOCK_SZ-1];
+//float32_t az_spd_input[FILTER_TAP_NUM];
+//float32_t el_spd_input[FILTER_TAP_NUM];
+//float32_t az_spd_output[FILTER_TAP_NUM + 2*FILTER_BLOCK_SZ-1];
+//float32_t el_spd_output[FILTER_TAP_NUM + 2*FILTER_BLOCK_SZ-1];
 
 struct runTime{
   thread_t *self;
@@ -214,8 +215,10 @@ struct runTime{
   //_float_filter_circular_t position[2];
   //_int_filter_t position_u[2];
   // FIR filter
-  _fir_angular_instance_t fir_pos[2];
-  _fir_instance_t fir_spd[2];
+  //_fir_angular_instance_t fir_pos[2];
+  //_fir_instance_t fir_spd[2];
+  
+  float az_pos[3], az_spd[3],el_pos[3],el_spd[3];
 };
 
 static struct runTime runTime, *resolverRuntime;
@@ -228,7 +231,7 @@ static const SPIConfig spicfg_ad2s_dev0 = {
   SPI_CR1_BR_2  |  SPI_CR1_CPHA
 };
 
-static AD2S1210Config ad2s_config_dev0 = {
+static const AD2S1210Config ad2s_config_dev0 = {
   &SPID2,
   &spicfg_ad2s_dev0,
   0,            // reverse
@@ -246,7 +249,7 @@ static AD2S1210Config ad2s_config_dev0 = {
   GPIOB,12,      // wr
 };
 
-static AD2S1210Config ad2s_config_dev1 = {
+static const AD2S1210Config ad2s_config_dev1 = {
   &SPID2,
   &spicfg_ad2s_dev0,
   0,            // reverse
@@ -264,7 +267,7 @@ static AD2S1210Config ad2s_config_dev1 = {
   GPIOC,4,      // wr
 };
 
-static AD2S1210Config ad2s_config_dev2 = {
+static const AD2S1210Config ad2s_config_dev2 = {
   &SPID1,
   &spicfg_ad2s_dev0,
   0,
@@ -322,7 +325,7 @@ static THD_FUNCTION(procAD2S ,p)
 //    runTime.position_u[i].stages = 4;
 //    runTime.position_u[i].reset = 1;
 //  }
-  
+  uint8_t init_cntr = 0;
   while(!chThdShouldTerminateX()){
     eventmask_t evt = chEvtWaitAny(ALL_EVENTS);
     if(evt & EV_UPDATE){
@@ -343,10 +346,25 @@ static THD_FUNCTION(procAD2S ,p)
       
       // FIR
       
-      cmssi_fir_update(&runTime.fir_spd[0],runTime.ad2s_dev->currentSpeed);
-      cmssi_fir_update(&runTime.fir_spd[1],runTime.ad2s_dev2->currentSpeed);
-      cmssi_fir_angular_update(&runTime.fir_pos[0],runTime.ad2s_dev->currentAngleRad);
-      cmssi_fir_angular_update(&runTime.fir_pos[1],runTime.ad2s_dev2->currentAngleRad);
+//      cmssi_fir_update(&runTime.fir_spd[0],runTime.ad2s_dev->currentSpeed);
+//      cmssi_fir_update(&runTime.fir_spd[1],runTime.ad2s_dev2->currentSpeed);
+//      cmssi_fir_angular_update(&runTime.fir_pos[0],runTime.ad2s_dev->currentAngleRad);
+//      cmssi_fir_angular_update(&runTime.fir_pos[1],runTime.ad2s_dev2->currentAngleRad);
+      
+      if(init_cntr < 3){
+        runTime.az_pos[init_cntr] = runTime.ad2s_dev->currentAngleRad;
+        runTime.az_spd[init_cntr] = runTime.ad2s_dev->currentSpeed;
+        runTime.el_pos[init_cntr] = runTime.ad2s_dev2->currentAngleRad;
+        runTime.el_spd[init_cntr] = runTime.ad2s_dev2->currentSpeed;
+        init_cntr++;
+      }
+      else{
+        mid_of_three_update(runTime.az_pos,runTime.ad2s_dev->currentAngleRad);
+        mid_of_three_update(runTime.az_spd,runTime.ad2s_dev->currentSpeed);
+        mid_of_three_update(runTime.el_pos,runTime.ad2s_dev2->currentAngleRad);
+        mid_of_three_update(runTime.el_spd,runTime.ad2s_dev2->currentSpeed);
+      }
+      
       if(runTime.main != NULL){
         chEvtSignal(runTime.main, EV_RESOLVER_ACQUIRED);
       }
@@ -365,39 +383,39 @@ void resolver_task_init()
   runTime.ad2s_dev2 = &ad2s1210[1];
   resolverRuntime = &runTime;
   
-  runTime.fir_pos[0].sin_input = &az_pos_sin_input[0];
-  runTime.fir_pos[0].cos_input = &az_pos_cos_input[0];
-  runTime.fir_pos[0].sin_output = &az_pos_sin_output[0];
-  runTime.fir_pos[0].cos_output = &az_pos_cos_output[0];
-  runTime.fir_pos[0].coe = filter_taps;
-  runTime.fir_pos[0].taps = FILTER_TAP_NUM;
-  runTime.fir_pos[0].size = FILTER_BLOCK_SZ;
-
-  runTime.fir_pos[1].sin_input = &el_pos_sin_input[0];
-  runTime.fir_pos[1].cos_input = &el_pos_cos_input[0];
-  runTime.fir_pos[1].sin_output = &el_pos_sin_output[0];
-  runTime.fir_pos[1].cos_output = &el_pos_cos_output[0];
-  runTime.fir_pos[1].coe = filter_taps;
-  runTime.fir_pos[1].taps = FILTER_TAP_NUM;
-  runTime.fir_pos[1].size = FILTER_BLOCK_SZ;
-  
-
-  runTime.fir_spd[0].input = az_spd_input;
-  runTime.fir_spd[0].output = &az_spd_output[0];
-  runTime.fir_spd[0].coe = filter_taps;
-  runTime.fir_spd[0].taps = FILTER_TAP_NUM;
-  runTime.fir_spd[0].size = FILTER_BLOCK_SZ;
-
-  runTime.fir_spd[1].input = el_spd_input;
-  runTime.fir_spd[1].output = &el_spd_output[0];
-  runTime.fir_spd[1].coe = filter_taps;
-  runTime.fir_spd[1].taps = FILTER_TAP_NUM;
-  runTime.fir_spd[1].size = FILTER_BLOCK_SZ;
-  
-  cmsis_fir_angular_init(&runTime.fir_pos[0]);
-  cmsis_fir_angular_init(&runTime.fir_pos[1]);
-  cmsis_fir_init(&runTime.fir_spd[0]);
-  cmsis_fir_init(&runTime.fir_spd[1]);
+//  runTime.fir_pos[0].sin_input = &az_pos_sin_input[0];
+//  runTime.fir_pos[0].cos_input = &az_pos_cos_input[0];
+//  runTime.fir_pos[0].sin_output = &az_pos_sin_output[0];
+//  runTime.fir_pos[0].cos_output = &az_pos_cos_output[0];
+//  runTime.fir_pos[0].coe = filter_taps;
+//  runTime.fir_pos[0].taps = FILTER_TAP_NUM;
+//  runTime.fir_pos[0].size = FILTER_BLOCK_SZ;
+//
+//  runTime.fir_pos[1].sin_input = &el_pos_sin_input[0];
+//  runTime.fir_pos[1].cos_input = &el_pos_cos_input[0];
+//  runTime.fir_pos[1].sin_output = &el_pos_sin_output[0];
+//  runTime.fir_pos[1].cos_output = &el_pos_cos_output[0];
+//  runTime.fir_pos[1].coe = filter_taps;
+//  runTime.fir_pos[1].taps = FILTER_TAP_NUM;
+//  runTime.fir_pos[1].size = FILTER_BLOCK_SZ;
+//  
+//
+//  runTime.fir_spd[0].input = az_spd_input;
+//  runTime.fir_spd[0].output = &az_spd_output[0];
+//  runTime.fir_spd[0].coe = filter_taps;
+//  runTime.fir_spd[0].taps = FILTER_TAP_NUM;
+//  runTime.fir_spd[0].size = FILTER_BLOCK_SZ;
+//
+//  runTime.fir_spd[1].input = el_spd_input;
+//  runTime.fir_spd[1].output = &el_spd_output[0];
+//  runTime.fir_spd[1].coe = filter_taps;
+//  runTime.fir_spd[1].taps = FILTER_TAP_NUM;
+//  runTime.fir_spd[1].size = FILTER_BLOCK_SZ;
+//  
+//  cmsis_fir_angular_init(&runTime.fir_pos[0]);
+//  cmsis_fir_angular_init(&runTime.fir_pos[1]);
+//  cmsis_fir_init(&runTime.fir_spd[0]);
+//  cmsis_fir_init(&runTime.fir_spd[1]);
   runTime.main = chRegFindThreadByName("MAIN");
   runTime.self = chThdCreateStatic(waAD2S,sizeof(waAD2S),NORMALPRIO,procAD2S,NULL);
 }
@@ -412,28 +430,38 @@ void resolver_task_stop()
 }
 float resolver_get_speed(uint8_t id)
 {
-  if(id < 2){
+  if(id == 0){
+    return runTime.az_spd[2];
     //return ad2s1210[id].currentSpeed;
     //if((runTime.speed[id].last < -0.5F) || (runTime.speed[id].last > 0.5F)){
       //return runTime.speed[id].last;
 //      return round(runTime.fir_spd[id].output[0]*1000)/1000.;
-    if((runTime.fir_spd[id].output[0] < 0.5) && (runTime.fir_spd[id].output[0] > -0.5)){
-      return 0.0f;
-    }
-    else{
-      return round(runTime.fir_spd[id].output[0]*100)/100.;
-    }
+
+//    if((runTime.fir_spd[id].output[0] < 0.5) && (runTime.fir_spd[id].output[0] > -0.5)){
+//      return 0.0f;
+//    }
+//    else{
+//      return round(runTime.fir_spd[id].output[0]*100)/100.;
+//    }
+    
     //}
+  }
+  else if(id == 1){
+    return runTime.el_spd[2];
   }
   return 0;
 }
 
 float resolver_get_position(uint8_t id)
 {
-  if(id < 2){
+  if(id == 0){
+    return runTime.az_pos[2];
     //return ad2s1210[id].currentAngle; 
     //return runTime.position[id].last;
-    return round(runTime.fir_pos[id].output*100)/100.;
+    //return round(runTime.fir_pos[id].output*100)/100.;
+  }
+  else if(id == 1){
+    return runTime.el_pos[2];
   }
   return 0;
 }
@@ -441,9 +469,13 @@ float resolver_get_position(uint8_t id)
 /* 240308, reverse direction */
 float resolver_get_position_deg(uint8_t id)
 {
-  if(id < 2){
+  if(id == 0){
 //    return runTime.position[id].last*RAD2DEGG;
-    return runTime.fir_pos[id].output*RAD2DEGG;
+//    return runTime.fir_pos[id].output*RAD2DEGG;
+    return runTime.az_pos[2]*RAD2DEGG;
+  }
+  else if(id == 1){
+    return runTime.el_pos[2]*RAD2DEGG;
   }
   return 0.0f;
 }

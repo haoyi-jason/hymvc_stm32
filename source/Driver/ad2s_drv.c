@@ -274,7 +274,7 @@ void ad2s_read_registers(AD2S1210Driver *dev)
   
 }
 
-msg_t ad2S_init(AD2S1210Driver *dev, AD2S1210Config *config)
+msg_t ad2S_init(AD2S1210Driver *dev,const AD2S1210Config *config)
 {
   if(dev == NULL) return MSG_RESET;
   if(config == NULL) return MSG_RESET;

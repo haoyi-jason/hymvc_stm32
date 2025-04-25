@@ -18683,6 +18683,12 @@
                 <name>$extsource$\ylib\numeric\Filters\iir.c</name>
             </file>
             <file>
+                <name>$extsource$\ylib\numeric\Filters\mid_of_three.c</name>
+            </file>
+            <file>
+                <name>$extsource$\ylib\numeric\Filters\mid_of_three.h</name>
+            </file>
+            <file>
                 <name>$extsource$\ylib\utility\st_chipid.c</name>
             </file>
             <file>
