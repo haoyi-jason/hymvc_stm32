@@ -1,0 +1,37 @@
+# Specify filepatterns you want git to ignore.
+
+# Specify filepatterns you want git to ignore.
+
+#ignore test code
+test/
+
+
+#ignore sublime files
+*.sublime-project
+*.sublime-workspace
+
+#ignore object files 
+*.o
+
+#ignore exacution files
+exe/
+*.exe
+*.stackdump
+
+#ignore liberaries
+*.so
+*.dll
+
+#ignore log files
+log/
+
+#ignore doxygen output path
+output/
+
+#ignore output 
+*/Obj/
+*/Exe/
+*/List/
+
+#ignore setting
+settings/
